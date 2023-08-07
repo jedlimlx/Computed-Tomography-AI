@@ -14,7 +14,7 @@ from layers.vision_transformer import Patches, PatchEncoder, DecoderBlock, Patch
 
 def DenoiseCT(mae, num_mask=0, dec_dim=256, dec_layers=8, dec_heads=16, dec_mlp_units=512, output_projection=False,
               output_patch_height=16, output_patch_width=16, output_x_patches=16, output_y_patches=16,
-              norm=partial(LayerNormalization, epsilon=1e-5)):
+              norm=partial(LayerNormalization, epsilon=1e-5), use_mae=True):
     input_shape = mae.inp_shape
     num_patches = mae.num_patches
 
@@ -23,7 +23,7 @@ def DenoiseCT(mae, num_mask=0, dec_dim=256, dec_layers=8, dec_heads=16, dec_mlp_
 
     x, mask_indices, unmask_indices, y = inputs
 
-    if mae is not None:
+    if use_mae:
         mae.patches.trainable = False
         x = mae.patches(x)
 
@@ -55,7 +55,7 @@ def DenoiseCT(mae, num_mask=0, dec_dim=256, dec_layers=8, dec_heads=16, dec_mlp_
     y = PatchEncoder(output_y_patches * output_x_patches, dec_dim, embedding_type='learned', name='dec_projection')(y)
 
     for i in range(dec_layers):
-        if mae is not None:
+        if use_mae:
             y = DecoderBlock(dec_heads, mae.enc_dim, dec_dim, mlp_units=dec_mlp_units, num_patches=num_patches,
                              dropout=mae.dropout, activation=mae.activation, norm=norm, name=f'dec_block_{i}')((y, x))
         else:
