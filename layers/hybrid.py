@@ -59,7 +59,7 @@ def DenoiseCT(mae, num_mask=0, dec_dim=256, dec_layers=8, dec_heads=16, dec_mlp_
             y = DecoderBlock(dec_heads, mae.enc_dim, dec_dim, mlp_units=dec_mlp_units, num_patches=num_patches,
                              dropout=mae.dropout, activation=mae.activation, norm=norm, name=f'dec_block_{i}')((y, x))
         else:
-            y = EncoderBlock(dec_heads, dec_dim, mlp_units=dec_mlp_units, num_patches=num_patches,
+            y = EncoderBlock(dec_heads, dec_dim, mlp_units=dec_mlp_units,
                              dropout=0.0, activation="gelu", norm=norm, name=f'enc_block_{i}')(y)
 
     y = norm(name='output_norm')(y)
