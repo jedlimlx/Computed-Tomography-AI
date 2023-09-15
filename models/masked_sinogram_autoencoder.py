@@ -192,6 +192,8 @@ class MaskedSinogramAutoencoder(Model):
 
         self.radon_transform = radon_transform
 
+        self.num_patches = int(input_shape[1] / sinogram_width * input_shape[0] / sinogram_height)
+
         self.dose = dose
         self.denoise = denoise
 
