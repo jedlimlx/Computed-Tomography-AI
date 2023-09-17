@@ -324,7 +324,6 @@ class MaskedSinogramAutoencoder(Model):
             dropout=0.,
             activation='gelu',
             mask_ratio=0.75,
-            norm=partial(LayerNormalization, epsilon=1e-6),
             radon_transform=None,
             dose=-1,
             denoise=False,
@@ -371,7 +370,7 @@ class MaskedSinogramAutoencoder(Model):
         )
 
         # building encoder layer
-        self.enc_norm = norm(name=f'{name}_dec_norm')
+        self.enc_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_dec_norm')
 
         self.encoder = [
             TransformerEncoder(
@@ -385,7 +384,7 @@ class MaskedSinogramAutoencoder(Model):
         ]
 
         # building decoder layers
-        self.dec_norm = norm(name=f'{name}_dec_norm')
+        self.dec_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_dec_norm')
 
         self.decoder_projection = Dense(dec_dim, name=f'{name}_dec_projection')
 
@@ -518,8 +517,7 @@ class MaskedSinogramAutoencoder(Model):
             'dec_mlp_units': self.dec_mlp_units,
             'dropout': self.dropout,
             'activation': self.activation,
-            'mask_ratio': self.mask_ratio,
-            'norm': serialize(self.enc_blocks[0].norm1)
+            'mask_ratio': self.mask_ratio
         })
 
         return cfg
@@ -547,3 +545,6 @@ if __name__ == "__main__":
     model.compile(optimizer=keras_core.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
     model.call(keras_core.random.normal(shape=(1, 1024, 513, 1)))
     model.summary()
+
+    model.save_weights("model.weights.h5")
+    model.save("model.keras")
