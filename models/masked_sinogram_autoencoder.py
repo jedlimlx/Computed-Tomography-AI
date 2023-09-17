@@ -69,7 +69,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         self.num_heads = num_heads
         self.mlp_dropout = mlp_dropout
         self.attention_dropout = attention_dropout
-        self.activation = activation
+        self.activation = Activation(activation)
         self.layer_norm_epsilon = layer_norm_epsilon
         self.mlp_units = [mlp_dim, project_dim]
 
@@ -86,6 +86,8 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         )
         self.dense1 = Dense(self.mlp_units[0])
         self.dense2 = Dense(self.mlp_units[1])
+
+        self.dropout = Dropout(self.mlp_dropout)
 
     def call(self, inputs):
         """Calls the Transformer Encoder on an input sequence.
@@ -105,21 +107,21 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
 
         x = self.layer_norm1(inputs)
         x = self.attn(x, x)
-        x = Dropout(self.mlp_dropout)(x)
-        x = Add()([x, inputs])
+        x = self.dropout(x)
+        x = x + inputs
 
         y = self.layer_norm2(x)
 
         y = self.dense1(y)
         if self.activation == kc.activations.gelu:
-            y = Activation(self.activation)(y, approximate=True)
+            y = self.activation(y, approximate=True)
         else:
-            y = Activation(self.activation)(y)
-        y = Dropout(self.mlp_dropout)(y)
+            y = self.activation(y)
+        y = self.dropout(y)
         y = self.dense2(y)
-        y = Dropout(self.mlp_dropout)(y)
+        y = self.dropout(y)
 
-        output = Add()([x, y])
+        output = x + y
 
         return output
 
