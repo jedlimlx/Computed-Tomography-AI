@@ -233,7 +233,7 @@ class SinogramPatchEncoder(Layer):
         self.projection = Dense(units=projection_dim)
 
         # positional encoding
-        self.position_embedding = PositionEmbedding(max_wavelength=num_patches)
+        self.position_embedding = PositionEmbedding(sequence_length=num_patches)
 
     def build(self, input_shape):
         _, depth, area = input_shape
