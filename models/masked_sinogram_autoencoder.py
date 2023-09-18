@@ -7,7 +7,7 @@ from keras_core.layers import *
 from keras_core.models import *
 
 # from keras_cv.layers import TransformerEncoder
-from keras_nlp.layers import PositionEmbedding
+from keras_nlp.layers import PositionEmbedding, SinePositionEncoding
 
 from functools import partial
 
@@ -233,7 +233,7 @@ class SinogramPatchEncoder(Layer):
         self.projection = Dense(units=projection_dim)
 
         # positional encoding
-        self.position_embedding = PositionEmbedding(sequence_length=num_patches)
+        self.position_embedding = SinePositionEncoding(max_wavelength=num_patches)
 
     def build(self, input_shape):
         _, depth, area = input_shape
@@ -370,7 +370,7 @@ class MaskedSinogramAutoencoder(Model):
         )
 
         # building encoder layer
-        self.enc_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_dec_norm')
+        self.enc_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_enc_norm')
 
         self.encoder = [
             TransformerEncoder(
@@ -379,8 +379,9 @@ class MaskedSinogramAutoencoder(Model):
                 mlp_dim=enc_mlp_units,
                 mlp_dropout=dropout,
                 attention_dropout=dropout,
-                activation=activation
-            ) for _ in range(self.enc_layers)
+                activation=activation,
+                name=f'{name}_enc_block_{i}'
+            ) for i in range(self.enc_layers)
         ]
 
         # building decoder layers
@@ -395,8 +396,9 @@ class MaskedSinogramAutoencoder(Model):
                 mlp_dim=dec_mlp_units,
                 mlp_dropout=dropout,
                 attention_dropout=dropout,
-                activation=activation
-            ) for _ in range(dec_layers)
+                activation=activation,
+                name=f'{name}_dec_block_{i}'
+            ) for i in range(dec_layers)
         ]
 
         self.output_projection = Dense(sinogram_width * sinogram_height, name=f'{name}_output_projection')
@@ -412,7 +414,7 @@ class MaskedSinogramAutoencoder(Model):
         patches = self.patches(inputs)
 
         if denoised_inputs is None:
-            denoised_patches = self.patches(inputs)
+            denoised_patches = patches
         else:
             denoised_patches = self.patches(denoised_inputs)
 
@@ -472,12 +474,13 @@ class MaskedSinogramAutoencoder(Model):
             patches, decoder_patches, mask_indices, unmasked_indices = self(noised_data, denoised_inputs=data)
             loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
             loss_output = decoder_patches[:, int(self.num_patches * (1 - self.mask_ratio)):]
-            total_loss = self.compiled_loss(loss_patch, loss_output)
+            total_loss = self.compute_loss(loss_patch, loss_output)
 
         gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self.compiled_metrics.update_state(loss_patch, loss_output)
+        for metric in self.metrics:
+            metric.update_state(loss_patch, loss_output)
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -486,9 +489,10 @@ class MaskedSinogramAutoencoder(Model):
         loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
         loss_output = decoder_patches[:, int(self.num_patches * (1 - self.mask_ratio)):]
 
-        self.compiled_loss(loss_patch, loss_output)
+        self.compute_loss(loss_patch, loss_output)
 
-        self.compiled_metrics.update_state(loss_patch, loss_output)
+        for metric in self.metrics:
+            metric.update_state(loss_patch, loss_output)
 
         return {m.name: m.result() for m in self.metrics}
 
