@@ -233,7 +233,7 @@ class SinogramPatchEncoder(Layer):
         self.projection = Dense(units=projection_dim)
 
         # positional encoding
-        self.position_embedding = SinePositionEncoding(max_wavelength=num_patches)
+        self.position_embedding = PositionEncoding(max_wavelength=num_patches)
 
     def build(self, input_shape):
         _, depth, area = input_shape
@@ -474,7 +474,7 @@ class MaskedSinogramAutoencoder(Model):
             patches, decoder_patches, mask_indices, unmasked_indices = self(noised_data, denoised_inputs=data)
             loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
             loss_output = decoder_patches[:, int(self.num_patches * (1 - self.mask_ratio)):]
-            total_loss = self.compiled_loss(loss_patch, loss_output)
+            total_loss = self.compute_loss(y=loss_patch, y_pred=loss_output)
 
         gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -489,7 +489,7 @@ class MaskedSinogramAutoencoder(Model):
         loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
         loss_output = decoder_patches[:, int(self.num_patches * (1 - self.mask_ratio)):]
 
-        self.compiled_loss(loss_patch, loss_output)
+        self.compute_loss(y=loss_patch, y_pred=loss_output)
 
         for metric in self.metrics:
             metric.update_state(loss_patch, loss_output)
