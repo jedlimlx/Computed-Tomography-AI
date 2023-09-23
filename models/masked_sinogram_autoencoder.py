@@ -22,7 +22,7 @@ class SinogramPatchEncoder(Layer):
             num_patches,
             projection_dim,
             mask_proportion=0.75,
-            embedding_type='learned',
+            embedding_type='sin_cos',
             name=None,
             **kwargs
     ):
