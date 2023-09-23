@@ -479,8 +479,13 @@ class MaskedSinogramAutoencoder(Model):
         gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
+        # Update the metrics.
+        # Metrics are configured in `compile()`.
         for metric in self.metrics:
-            metric.update_state(loss_patch, loss_output)
+            if metric.name == "loss":
+                metric.update_state(total_loss)
+            else:
+                metric.update_state(y=loss_patch, y_pred=loss_output)
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -489,10 +494,15 @@ class MaskedSinogramAutoencoder(Model):
         loss_patch = tf.gather(patches, mask_indices, axis=1, batch_dims=1)
         loss_output = decoder_patches[:, int(self.num_patches * (1 - self.mask_ratio)):]
 
-        self.compute_loss(y=loss_patch, y_pred=loss_output)
+        loss = self.compute_loss(y=loss_patch, y_pred=loss_output)
 
+        # Update the metrics.
+        # Metrics are configured in `compile()`.
         for metric in self.metrics:
-            metric.update_state(loss_patch, loss_output)
+            if metric.name == "loss":
+                metric.update_state(loss)
+            else:
+                metric.update_state(y=loss_patch, y_pred=loss_output)
 
         return {m.name: m.result() for m in self.metrics}
 
