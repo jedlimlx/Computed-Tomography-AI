@@ -1,10 +1,11 @@
 import tensorflow as tf
-from keras.layers import *  # todo
+from keras_core.layers import *
+
 import numpy as np
-import tensorflow_addons as tfa
 from scipy.signal.windows import cosine
 
 
+# todo properly convert to keras core
 class LPRadonBase(Layer):
     def __init__(self, n_angles, n_det=None, n_span=3, cor=None, interp_type='linear', *args, **kwargs):
         super(LPRadonBase, self).__init__(*args, **kwargs)

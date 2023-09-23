@@ -6,10 +6,11 @@ import keras_core.ops as ops
 from keras_core.layers import *
 from keras_core.models import *
 
-# from keras_cv.layers import TransformerEncoder
-from keras_nlp.layers import PositionEmbedding, SinePositionEncoding
+from keras_nlp.layers import PositionEmbedding
 
 from functools import partial
+
+from keras_nlp.src.layers import SinePositionEncoding
 
 from utils import add_noise
 from utils.data import process_sinogram
@@ -218,6 +219,7 @@ class SinogramPatchEncoder(Layer):
             num_patches,
             projection_dim,
             mask_proportion=0.75,
+            embedding_type='learned',
             name=None,
             **kwargs
     ):
@@ -233,7 +235,10 @@ class SinogramPatchEncoder(Layer):
         self.projection = Dense(units=projection_dim)
 
         # positional encoding
-        self.position_embedding = PositionEmbedding(sequence_length=num_patches)
+        if embedding_type == 'learned':
+            self.position_embedding = PositionEmbedding(num_patches)
+        else:
+            self.position_embedding = SinePositionEncoding(num_patches)
 
     def build(self, input_shape):
         _, depth, area = input_shape
