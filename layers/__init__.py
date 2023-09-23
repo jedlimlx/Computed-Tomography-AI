@@ -1,7 +1,6 @@
-from layers.residual_block import ResidualBlock, ResidualStack
-from layers.dense_block import DenseBlock, TransitionBlock
-from layers.convnext_block import ConvNeXtBlock
-from layers.inverted_residual_block import MBConvBlock, FusedMBConvBlock
-from layers.vision_transformer import CTransformer, CTranslator, MLP, EncoderBlock, Patches, PatchEncoder, PatchDecoder
-from layers.regularisation import StochasticDepth, DropBlock1D, DropBlock2D, DropBlock3D
-from layers.attention import SqueezeAndExcite2D, SqueezeAndExcite3D, SpatialAttentionModule, global_context_block
+from layers.old_code.residual_block import ResidualBlock, ResidualStack
+from layers.old_code.dense_block import DenseBlock, TransitionBlock
+from layers.old_code.convnext_block import ConvNeXtBlock
+from layers.old_code.inverted_residual_block import MBConvBlock, FusedMBConvBlock
+
+from layers.transformer_blocks import Patches, PatchDecoder, PatchEncoder, TransformerEncoder

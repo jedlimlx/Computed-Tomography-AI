@@ -8,7 +8,7 @@ from keras.layers import *
 from functools import partial
 
 from layers.vision_transformer import PatchEncoder, DecoderBlock
-from layers.utils import Cart2Polar, Polar2Cart
+from layers.old_code.utils import Cart2Polar, Polar2Cart
 
 from model import create_model
 

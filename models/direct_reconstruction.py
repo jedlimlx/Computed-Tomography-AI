@@ -1,49 +1,7 @@
 from keras_core.layers import *
 from keras_core.models import *
-from keras_nlp.layers import SinePositionEncoding, PositionEmbedding
 
-from models.masked_sinogram_autoencoder import Patches, SinogramPatchEncoder, PatchDecoder, TransformerEncoder
-
-
-class PatchEncoder(Layer):
-    def __init__(self, num_patches, projection_dim, embedding_type='learned', name=None, **kwargs):
-        """
-        Projection and embedding
-        Args:
-            num_patches: Sequence length
-            projection_dim: Output dim after projection
-            embedding_type: Type of embedding used, 'sin_cos' or 'learned'
-            name: Name for this op
-        """
-        assert embedding_type in ['sin_cos', 'learned']  # error checking
-        super(PatchEncoder, self).__init__(name=name, **kwargs)
-        self.num_patches = num_patches
-        self.projection_dim = projection_dim
-        self.embedding_type = embedding_type
-
-        # projection
-        self.projection = Dense(units=projection_dim)
-
-        # positional encoding
-        if embedding_type == 'learned':
-            self.position_embedding = PositionEmbedding(num_patches)
-        else:
-            self.position_embedding = SinePositionEncoding(num_patches)
-
-    def call(self, patch, **kwargs):
-        encoded = self.projection(patch)
-        embedding = self.position_embedding(encoded)
-
-        return encoded + embedding
-
-    def get_config(self):
-        cfg = super(PatchEncoder, self).get_config()
-        cfg.update({
-            'num_patches': self.num_patches,
-            'projection_dim': self.projection_dim,
-            'embedding_type': self.embedding_type
-        })
-        return cfg
+from layers import PatchEncoder, PatchDecoder, Patches, TransformerEncoder
 
 
 class DirectReconstructionModel(Model):
