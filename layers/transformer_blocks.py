@@ -48,6 +48,7 @@ class PatchEncoder(Layer):
         """
         assert embedding_type in ['sin_cos', 'learned']  # error checking
         super(PatchEncoder, self).__init__(name=name, **kwargs)
+
         self.num_patches = num_patches
         self.projection_dim = projection_dim
         self.embedding_type = embedding_type
@@ -252,6 +253,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             self,
             project_dim,
             num_heads,
+            enc_dim,
             mlp_dim,
             mlp_dropout=0.1,
             attention_dropout=0.1,
@@ -262,6 +264,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         super().__init__(**kwargs)
         self.project_dim = project_dim
         self.mlp_dim = mlp_dim
+        self.enc_dim = enc_dim
         self.num_heads = num_heads
         self.mlp_dropout = mlp_dropout
         self.attention_dropout = attention_dropout
@@ -289,7 +292,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
 
         self.cross_attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=self.mae.enc_dim // self.num_heads,
+            key_dim=self.enc_dim // self.num_heads,
             dropout=self.attention_dropout
         )
 
@@ -343,6 +346,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             {
                 "project_dim": self.project_dim,
                 "mlp_dim": self.mlp_dim,
+                "enc_dim": self.enc_dim,
                 "num_heads": self.num_heads,
                 "attention_dropout": self.attention_dropout,
                 "mlp_dropout": self.mlp_dropout,

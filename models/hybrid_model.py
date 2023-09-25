@@ -41,7 +41,7 @@ class HybridModel(Model):
 
         self.num_patches = autoencoder.num_patches
 
-        # building encoder layers
+        # building patch encoder layers
         self.patches = Patches(
             self.output_patch_width,
             self.output_patch_height,
@@ -50,24 +50,25 @@ class HybridModel(Model):
         self.patch_encoder = PatchEncoder(
             self.output_y_patches * self.output_x_patches,
             self.dec_dim,
-            embedding_type='learned',
+            embedding_type='sin_cos',
             name='dec_projection'
         )
 
-        self.dec_blocks = [
+        # building decoder layers
+        self.decoder = [
             TransformerDecoder(
-                self.dec_heads,
-                self.autoencoder.enc_dim,
-                self.dec_dim,
-                mlp_units=self.dec_mlp_units,
-                num_patches=self.num_patches,
-                dropout=self.autoencoder.dropout,
+                project_dim=self.dec_dim,
+                num_heads=self.dec_heads,
+                enc_dim=self.autoencoder.enc_dim,
+                mlp_dim=self.dec_mlp_units,
+                mlp_dropout=self.autoencoder.dropout,
+                attention_dropout=self.autoencoder.dropout,
                 activation=self.autoencoder.activation,
                 name=f'dec_block_{i}'
             ) for i in range(self.dec_layers)
         ]
 
-        self.norm_layer = self.norm(name='output_norm')
+        self.norm_layer = LayerNormalization(epsilon=1e-6, name=f'output_norm')
 
         self.dense = Dense(self.output_patch_height * self.output_patch_width, name='output_projection')
         self.patch_decoder = PatchDecoder(
@@ -82,28 +83,27 @@ class HybridModel(Model):
             final_shape[0], final_shape[1]
         )
 
-        # freeze autoencoder weights
+        # configure autoencoder
         self.autoencoder.trainable = False
+        self.autoencoder.patch_encoder.num_mask = self.num_mask
 
     def call(self, inputs, training=None, mask=None):
         x, mask_indices, unmask_indices, y = inputs
 
+        # Convert to patches and encode
         x = self.autoencoder.patches(x)
-
-        self.autoencoder.patch_encoder.num_mask = self.num_mask
 
         (
             unmasked_embeddings,
             masked_embeddings,
             unmasked_positions,
-            mask_indices,
-            unmask_indices,
-        ) = self.autoencoder.patch_encoder(x, mask_indices, unmask_indices)
+            _, _
+        ) = self.autoencoder.patch_encoder(x, mask_indices=mask_indices, unmask_indices=unmask_indices)
 
-        # Pass the unmaksed patches to the encoder.
+        # Pass the unmasked patches to the encoder.
         encoder_outputs = unmasked_embeddings
 
-        for enc_block in self.autoencoder.enc_blocks:
+        for enc_block in self.autoencoder.encoder:
             encoder_outputs = enc_block(encoder_outputs)
 
         encoder_outputs = self.autoencoder.enc_norm(encoder_outputs)
@@ -115,7 +115,7 @@ class HybridModel(Model):
         y = self.patches(y)
         y = self.patch_encoder(y)
 
-        for dec_block in self.dec_blocks:
+        for dec_block in self.decoder:
             y = dec_block((y, x))
 
         y = self.norm_layer(y)
@@ -126,20 +126,47 @@ class HybridModel(Model):
 
 
 if __name__ == "__main__":
-    import keras_core
+    import tensorflow as tf
 
-    model = MaskedSinogramAutoencoder(
+    from models.masked_sinogram_autoencoder import MaskedSinogramAutoencoder
+
+    autoencoder = MaskedSinogramAutoencoder(
         enc_layers=4,
         dec_layers=1,
         sinogram_width=513,
         sinogram_height=1,
         input_shape=(1024, 513, 1),
-        enc_dim=256,
+        enc_dim=512,
         enc_mlp_units=2048,
-        dec_dim=256,
+        dec_dim=512,
         dec_mlp_units=2048,
         mask_ratio=0.75
     )
-    model.compile(optimizer=keras_core.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
-    model.call(keras_core.random.normal(shape=(1, 1024, 513, 1)))
-    model.summary()
+
+    model = HybridModel(
+        autoencoder,
+        num_mask=0,
+        dec_dim=512,
+        dec_layers=8,
+        dec_heads=16,
+        dec_mlp_units=512,
+        output_patch_height=16,
+        output_patch_width=16,
+        output_x_patches=16,
+        output_y_patches=16,
+        final_shape=(362, 362, 1),
+    )
+
+    rand_indices = tf.argsort(
+        tf.random.uniform(shape=(1, 1024)), axis=-1
+    )
+    mask_indices = rand_indices[:, : 0]
+    unmask_indices = rand_indices[:, 0:]
+    model.call(
+        (
+            tf.random.normal(shape=(1, 1024, 513, 1)),
+            mask_indices,
+            unmask_indices,
+            tf.random.normal(shape=(1, 512, 512, 1))
+        )
+    )

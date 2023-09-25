@@ -8,6 +8,7 @@ class DirectReconstructionModel(Model):
     def __init__(
             self,
             input_shape=(256, 256, 1),
+            final_shape=(362, 362, 1),
             sinogram_height=1,
             sinogram_width=256,
             enc_dim=256,
@@ -55,6 +56,8 @@ class DirectReconstructionModel(Model):
 
         self.dropout = dropout
         self.activation = activation
+
+        self.final_shape = final_shape
 
         # computing number of patches
         if input_shape[0] % sinogram_height != 0 or input_shape[1] % sinogram_width != 0:
@@ -116,6 +119,11 @@ class DirectReconstructionModel(Model):
             name=f"{name}_depatchify"
         )
 
+        # resize so the model will use the legit resolution and give back the legit PSNR
+        self.resize = Resizing(
+            final_shape[0], final_shape[1]
+        )
+
     def call(self, inputs, training=None, mask=None):
         x = self.patches(inputs)
         x = self.patch_encoder(x)
@@ -137,7 +145,7 @@ class DirectReconstructionModel(Model):
             x = self.output_projection(x)
 
         # reshape
-        return self.patch_decoder(x)
+        return self.resize(self.patch_decoder(x))
 
 
 if __name__ == "__main__":
