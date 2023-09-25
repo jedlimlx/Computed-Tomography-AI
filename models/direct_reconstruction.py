@@ -107,7 +107,7 @@ class DirectReconstructionModel(Model):
 
         # final decoder layers
         self.output_projection = Dense(
-            sinogram_width * sinogram_height,
+            dec_dim,
             name=f'{name}_output_projection'
         )
 
@@ -156,27 +156,23 @@ if __name__ == "__main__":
     import keras_core
 
     model = DirectReconstructionModel(
-        input_shape=(256, 256, 1),
+        input_shape=(1024, 513, 1),
+        final_shape=(362, 362, 1),
+        enc_layers=4,
+        dec_layers=4,
+        sinogram_width=513,
         sinogram_height=1,
-        sinogram_width=256,
-        enc_dim=256,
-        enc_layers=8,
-        enc_mlp_units=512,
-        enc_heads=16,
-        dec_projection=True,
+        enc_dim=512,
+        enc_mlp_units=2048,
         dec_dim=256,
-        dec_layers=8,
-        dec_heads=16,
-        dec_mlp_units=512,
-        output_projection=False,
-        output_patch_height=16,
+        dec_mlp_units=2048,
         output_patch_width=16,
-        output_x_patches=16,
-        output_y_patches=16,
-        dropout=0.,
-        activation='gelu'
+        output_patch_height=16,
+        output_x_patches=32,
+        output_y_patches=32,
+        output_projection=True
     )
-    model.call(keras_core.random.normal(shape=(1, 256, 256, 1)))
+    model.call(keras_core.random.normal(shape=(1, 1024, 513, 1)))
 
     model.compile(optimizer=keras_core.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
     model.summary()

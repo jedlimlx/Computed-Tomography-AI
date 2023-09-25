@@ -94,8 +94,7 @@ class PatchDecoder(Layer):
         if self.ignore_last: encoded = encoded[:, :-1, :]
         reshaped = ops.reshape(encoded, (-1, self.y_patches, self.x_patches, self.patch_height, self.patch_width))
         reshaped = ops.transpose(reshaped, [0, 1, 3, 2, 4])
-        reshaped = ops.reshape(reshaped, (
-        -1, self.y_patches * self.patch_height, self.x_patches * self.patch_width, self.channels))
+        reshaped = ops.reshape(reshaped, (-1, self.y_patches * self.patch_height, self.x_patches * self.patch_width, self.channels))
 
         return reshaped
 
