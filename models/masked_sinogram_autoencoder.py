@@ -1,10 +1,10 @@
 import tensorflow as tf
 
-import keras_core as keras
-import keras_core.ops as ops
+import keras
+import keras.ops as ops
 
-from keras_core.layers import *
-from keras_core.models import *
+from keras.layers import *
+from keras.models import *
 
 from keras_nlp.layers import SinePositionEncoding, PositionEmbedding
 

@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-import keras_core as kc
-import keras_core.ops as ops
+import keras
+import keras.ops as ops
 
 
 def preprocess_data(sinogram, gt, resize_img=True, expand_dims=True):
