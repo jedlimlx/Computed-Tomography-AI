@@ -1,4 +1,4 @@
-import keras
+import keras_core as keras
 import tensorflow as tf
 
 
