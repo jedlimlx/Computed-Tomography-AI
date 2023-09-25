@@ -1,6 +1,6 @@
-import keras_core.ops as ops
-from keras_core.layers import *
-from keras_core.models import *
+import keras.ops as ops
+from keras.layers import *
+from keras.models import *
 
 from layers import Patches, PatchEncoder, PatchDecoder, TransformerDecoder
 

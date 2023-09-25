@@ -1,10 +1,10 @@
 import tensorflow as tf
 
-import keras_core as kc
-import keras_core.ops as ops
+import keras
+import keras.ops as ops
 
-from keras_core.layers import *
-from keras_core.models import *
+from keras.layers import *
+from keras.models import *
 
 from keras_nlp.layers import SinePositionEncoding, PositionEmbedding
 
@@ -97,7 +97,7 @@ class SinogramPatchEncoder(Layer):
         # Create random indices from a uniform distribution and then split
         # it into mask and unmask indices.
         rand_indices = ops.argsort(
-            kc.random.uniform(shape=(batch_size, self.num_patches)), axis=-1
+            keras.random.uniform(shape=(batch_size, self.num_patches)), axis=-1
         )
         mask_indices = rand_indices[:, :self.num_mask]
         unmask_indices = rand_indices[:, self.num_mask:]
@@ -350,7 +350,7 @@ if __name__ == "__main__":
 
     os.environ["KERAS_BACKEND"] = "tensorflow"
 
-    import keras_core
+    import keras
 
     model = MaskedSinogramAutoencoder(
         enc_layers=4,

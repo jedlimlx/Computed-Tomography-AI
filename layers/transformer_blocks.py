@@ -1,9 +1,9 @@
-import keras_core as kc
-import keras_core.ops as ops
+import keras
+import keras.ops as ops
 
 import tensorflow as tf
 
-from keras_core.layers import *
+from keras.layers import *
 from keras_nlp.layers import PositionEmbedding, SinePositionEncoding
 
 
@@ -136,7 +136,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
             mlp_dim,
             mlp_dropout=0.1,
             attention_dropout=0.1,
-            activation=kc.activations.gelu,
+            activation=keras.activations.gelu,
             layer_norm_epsilon=1e-06,
             **kwargs,
     ):

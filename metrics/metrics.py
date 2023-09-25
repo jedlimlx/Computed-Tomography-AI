@@ -1,5 +1,5 @@
+import keras
 import tensorflow as tf
-import keras_core as keras
 
 
 class SSIM(keras.metrics.Mean):
