@@ -190,7 +190,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         y = self.layer_norm2(x)
 
         y = self.dense1(y)
-        if self.activation == kc.activations.gelu:
+        if self.activation == keras.activations.gelu:
             y = self.activation(y, approximate=True)
         else:
             y = self.activation(y)
@@ -206,7 +206,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         config = super().get_config()
         activation = self.activation
         if not isinstance(activation, (str, dict)):
-            activation = kc.activations.serialize(activation)
+            activation = keras.activations.serialize(activation)
         config.update(
             {
                 "project_dim": self.project_dim,
@@ -224,7 +224,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
     def from_config(cls, config, custom_objects=None):
         activation = config.pop("activation")
         if isinstance(activation, (str, dict)):
-            activation = kc.activations.deserialize(activation)
+            activation = keras.activations.deserialize(activation)
         return cls(activation=activation, **config)
 
 
@@ -256,7 +256,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             mlp_dim,
             mlp_dropout=0.1,
             attention_dropout=0.1,
-            activation=kc.activations.gelu,
+            activation=keras.activations.gelu,
             layer_norm_epsilon=1e-06,
             **kwargs,
     ):
@@ -324,7 +324,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
 
         z = self.layer_norm3(y)
         z = self.dense1(z)
-        if self.activation == kc.activations.gelu:
+        if self.activation == keras.activations.gelu:
             z = self.activation(z, approximate=True)
         else:
             z = self.activation(z)
@@ -340,7 +340,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         config = super().get_config()
         activation = self.activation
         if not isinstance(activation, (str, dict)):
-            activation = kc.activations.serialize(activation)
+            activation = keras.activations.serialize(activation)
         config.update(
             {
                 "project_dim": self.project_dim,
@@ -359,5 +359,5 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
     def from_config(cls, config, custom_objects=None):
         activation = config.pop("activation")
         if isinstance(activation, (str, dict)):
-            activation = kc.activations.deserialize(activation)
+            activation = keras.activations.deserialize(activation)
         return cls(activation=activation, **config)
