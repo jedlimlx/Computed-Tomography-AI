@@ -4,7 +4,178 @@ import keras.ops as ops
 import tensorflow as tf
 
 from keras.layers import *
-from keras_nlp.layers import PositionEmbedding, SinePositionEncoding
+
+
+class SinePositionEncoding(Layer):
+    """Sinusoidal positional encoding layer.
+
+    This layer calculates the position encoding as a mix of sine and cosine
+    functions with geometrically increasing wavelengths. Defined and formulized
+    in [Attention is All You Need](https://arxiv.org/abs/1706.03762).
+
+    Takes as input an embedded token tensor. The input must have shape
+    [batch_size, sequence_length, feature_size]. This layer will return a
+    positional encoding the same size as the embedded token tensor, which
+    can be added directly to the embedded token tensor.
+
+    Args:
+        max_wavelength: The maximum angular wavelength of the sine/cosine
+            curves, as described in Attention is All You Need. Defaults to
+            `10000`.
+
+    Examples:
+    ```python
+    # create a simple embedding layer with sinusoidal positional encoding
+    seq_len = 100
+    vocab_size = 1000
+    embedding_dim = 32
+    inputs = keras.Input((seq_len,), dtype="float32")
+    embedding = keras.layers.Embedding(
+        input_dim=vocab_size, output_dim=embedding_dim
+    )(inputs)
+    positional_encoding = keras_nlp.layers.SinePositionEncoding()(embedding)
+    outputs = embedding + positional_encoding
+    ```
+
+    References:
+     - [Vaswani et al., 2017](https://arxiv.org/abs/1706.03762)
+    """
+
+    def __init__(
+        self,
+        max_wavelength=10000,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.max_wavelength = max_wavelength
+
+    def call(self, inputs):
+        shape = ops.shape(inputs)
+        seq_length = shape[-2]
+        hidden_size = shape[-1]
+        position = ops.cast(ops.arange(seq_length), self.compute_dtype)
+        min_freq = ops.cast(1 / self.max_wavelength, dtype=self.compute_dtype)
+        timescales = ops.power(
+            min_freq,
+            ops.cast(2 * (ops.arange(hidden_size) // 2), self.compute_dtype)
+            / ops.cast(hidden_size, self.compute_dtype),
+        )
+        angles = ops.expand_dims(position, 1) * ops.expand_dims(timescales, 0)
+        # even indices are sine, odd are cosine
+        cos_mask = ops.cast(ops.arange(hidden_size) % 2, self.compute_dtype)
+        sin_mask = 1 - cos_mask
+        # embedding shape is [seq_length, hidden_size]
+        positional_encodings = (
+            ops.sin(angles) * sin_mask + ops.cos(angles) * cos_mask
+        )
+
+        return ops.broadcast_to(positional_encodings, shape)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "max_wavelength": self.max_wavelength,
+            }
+        )
+        return config
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
+class PositionEmbedding(Layer):
+    """A layer which learns a position embedding for inputs sequences.
+
+    This class assumes that in the input tensor, the last dimension corresponds
+    to the features, and the dimension before the last corresponds to the
+    sequence.
+
+    This layer does not supporting masking, but can be combined with a
+    `keras.layers.Embedding` for padding mask support.
+
+    Args:
+        sequence_length: The maximum length of the dynamic sequence.
+        initializer: The initializer to use for the embedding weights. Defaults
+            to `"glorot_uniform"`.
+        seq_axis: The axis of the input tensor where we add the embeddings.
+
+    Examples:
+
+    Called directly on input.
+    >>> layer = keras_nlp.layers.PositionEmbedding(sequence_length=10)
+    >>> layer(np.zeros((8, 10, 16)))
+
+    Combine with a token embedding.
+    ```python
+    seq_length = 50
+    vocab_size = 5000
+    embed_dim = 128
+    inputs = keras.Input(shape=(seq_length,))
+    token_embeddings = keras.layers.Embedding(
+        input_dim=vocab_size, output_dim=embed_dim
+    )(inputs)
+    position_embeddings = keras_nlp.layers.PositionEmbedding(
+        sequence_length=seq_length
+    )(token_embeddings)
+    outputs = token_embeddings + position_embeddings
+    ```
+
+    Reference:
+     - [Devlin et al., 2019](https://arxiv.org/abs/1810.04805)
+    """
+
+    def __init__(
+        self,
+        sequence_length,
+        initializer="glorot_uniform",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if sequence_length is None:
+            raise ValueError(
+                "`sequence_length` must be an Integer, received `None`."
+            )
+        self.sequence_length = int(sequence_length)
+        self.initializer = keras.initializers.get(initializer)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "sequence_length": self.sequence_length,
+                "initializer": keras.initializers.serialize(self.initializer),
+            }
+        )
+        return config
+
+    def build(self, input_shape):
+        feature_size = input_shape[-1]
+        self.position_embeddings = self.add_weight(
+            name="embeddings",
+            shape=[self.sequence_length, feature_size],
+            initializer=self.initializer,
+            trainable=True,
+        )
+
+        super().build(input_shape)
+
+    def call(self, inputs, start_index=0):
+        shape = ops.shape(inputs)
+        feature_length = shape[-1]
+        sequence_length = shape[-2]
+        # trim to match the length of the input sequence, which might be less
+        # than the sequence_length of the layer.
+        position_embeddings = ops.convert_to_tensor(self.position_embeddings)
+        position_embeddings = ops.slice(
+            position_embeddings,
+            (start_index, 0),
+            (sequence_length, feature_length),
+        )
+        return ops.broadcast_to(position_embeddings, shape)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 
 class Patches(Layer):

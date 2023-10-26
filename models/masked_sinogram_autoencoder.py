@@ -6,9 +6,7 @@ import keras.ops as ops
 from keras.layers import *
 from keras.models import *
 
-from keras_nlp.layers import SinePositionEncoding, PositionEmbedding
-
-from layers import Patches, PatchDecoder, TransformerEncoder
+from layers import Patches, PatchDecoder, TransformerEncoder, SinePositionEncoding, PositionEmbedding
 
 from functools import partial
 
