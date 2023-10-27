@@ -25,7 +25,7 @@ def preprocess_data(sinogram, gt, resize_img=True, expand_dims=True):
 def add_noise(img, dose=4096):
     img = dose * ops.exp(-img * 81.35858)
 
-    img = img + kc.random.normal(shape=ops.shape(img), mean=0.0, stddev=img ** 0.5, dtype="float32")
+    img = img + keras.random.normal(shape=ops.shape(img), mean=0.0, stddev=img ** 0.5, dtype="float32")
     img = ops.clip(img / dose, 0.1 / dose, tf.float32.max)
     img = -ops.log(img) / 81.35858
     return img
