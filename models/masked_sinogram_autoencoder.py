@@ -131,6 +131,7 @@ class MaskedSinogramAutoencoder(Model):
             dropout=0.,
             activation='gelu',
             mask_ratio=0.75,
+            divide_heads=True,
             radon_transform=None,
             dose=-1,
             denoise=False,
@@ -164,6 +165,8 @@ class MaskedSinogramAutoencoder(Model):
         self.activation = activation
         self.mask_ratio = mask_ratio
 
+        self.divide_heads = divide_heads
+
         if input_shape[0] % sinogram_height != 0 or input_shape[1] % sinogram_width != 0:
             raise ValueError("Cannot divide image into even patches")
 
@@ -187,6 +190,7 @@ class MaskedSinogramAutoencoder(Model):
                 mlp_dropout=dropout,
                 attention_dropout=dropout,
                 activation=activation,
+                divide_heads=divide_heads,
                 name=f'{name}_enc_block_{i}'
             ) for i in range(self.enc_layers)
         ]

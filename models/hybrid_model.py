@@ -19,6 +19,7 @@ class HybridModel(Model):
             output_x_patches=16,
             output_y_patches=16,
             final_shape=(362, 362, 1),
+            divide_heads=True,
             name=None,
             **kwargs
     ):
@@ -35,6 +36,8 @@ class HybridModel(Model):
         self.output_patch_width = output_patch_width
         self.output_x_patches = output_x_patches
         self.output_y_patches = output_y_patches
+
+        self.divide_heads = divide_heads
 
         self.autoencoder = autoencoder
         self.inp_shape = autoencoder.inp_shape
@@ -64,6 +67,7 @@ class HybridModel(Model):
                 mlp_dropout=self.autoencoder.dropout,
                 attention_dropout=self.autoencoder.dropout,
                 activation=self.autoencoder.activation,
+                divide_heads=divide_heads,
                 name=f'dec_block_{i}'
             ) for i in range(self.dec_layers)
         ]

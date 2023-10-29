@@ -27,6 +27,7 @@ class DirectReconstructionModel(Model):
             output_y_patches=16,
             dropout=0.,
             activation='gelu',
+            divide_heads=True,
             name='ctransformer0',
             **kwargs
     ):
@@ -88,6 +89,7 @@ class DirectReconstructionModel(Model):
                 mlp_dropout=dropout,
                 attention_dropout=dropout,
                 activation=activation,
+                divide_heads=divide_heads,
                 name=f"{name}_enc_block_{i}"
             ) for i in range(enc_layers)
         ]
@@ -101,6 +103,7 @@ class DirectReconstructionModel(Model):
                 mlp_dropout=dropout,
                 attention_dropout=dropout,
                 activation=activation,
+                divide_heads=divide_heads,
                 name=f"{name}_dec_block_{i}"
             ) for i in range(dec_layers)
         ]

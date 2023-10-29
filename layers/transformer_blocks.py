@@ -309,6 +309,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
             attention_dropout=0.1,
             activation=keras.activations.gelu,
             layer_norm_epsilon=1e-06,
+            divide_heads=True,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -321,6 +322,8 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         self.layer_norm_epsilon = layer_norm_epsilon
         self.mlp_units = [mlp_dim, project_dim]
 
+        self.divide_heads = divide_heads
+
         self.layer_norm1 = LayerNormalization(
             epsilon=self.layer_norm_epsilon
         )
@@ -329,7 +332,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         )
         self.attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=self.project_dim,  # // self.num_heads,
+            key_dim=self.project_dim // (self.num_heads if self.divide_heads else 1),
             dropout=self.attention_dropout,
         )
         self.dense1 = Dense(self.mlp_units[0])
@@ -428,6 +431,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             attention_dropout=0.1,
             activation=keras.activations.gelu,
             layer_norm_epsilon=1e-06,
+            divide_heads=True,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -439,6 +443,8 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         self.activation = Activation(activation)
         self.layer_norm_epsilon = layer_norm_epsilon
         self.mlp_units = [mlp_dim, project_dim]
+
+        self.divide_heads = divide_heads
 
         # layer norms
         self.layer_norm1 = LayerNormalization(
@@ -454,7 +460,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         # attention
         self.attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=self.project_dim,  # // self.num_heads,
+            key_dim=self.project_dim // (self.num_heads if self.divide_heads else 1),
             dropout=self.attention_dropout
         )
 
@@ -467,7 +473,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
     def build(self, input_shape):
         self.cross_attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=input_shape[1][-1],  # // self.num_heads,
+            key_dim=input_shape[1][-1] // (self.num_heads if self.divide_heads else 1),
             dropout=self.attention_dropout
         )
 
