@@ -329,7 +329,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
         )
         self.attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=self.project_dim // self.num_heads,
+            key_dim=self.project_dim,  # // self.num_heads,
             dropout=self.attention_dropout,
         )
         self.dense1 = Dense(self.mlp_units[0])
@@ -423,7 +423,6 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             self,
             project_dim,
             num_heads,
-            enc_dim,
             mlp_dim,
             mlp_dropout=0.1,
             attention_dropout=0.1,
@@ -434,7 +433,6 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         super().__init__(**kwargs)
         self.project_dim = project_dim
         self.mlp_dim = mlp_dim
-        self.enc_dim = enc_dim
         self.num_heads = num_heads
         self.mlp_dropout = mlp_dropout
         self.attention_dropout = attention_dropout
@@ -456,13 +454,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         # attention
         self.attn = MultiHeadAttention(
             num_heads=self.num_heads,
-            key_dim=self.project_dim // self.num_heads,
-            dropout=self.attention_dropout
-        )
-
-        self.cross_attn = MultiHeadAttention(
-            num_heads=self.num_heads,
-            key_dim=self.enc_dim // self.num_heads,
+            key_dim=self.project_dim,  # // self.num_heads,
             dropout=self.attention_dropout
         )
 
@@ -471,6 +463,13 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         self.dense2 = Dense(self.mlp_units[1])
 
         self.dropout = Dropout(self.mlp_dropout)
+
+    def build(self, input_shape):
+        self.cross_attn = MultiHeadAttention(
+            num_heads=self.num_heads,
+            key_dim=input_shape[1][-1],  # // self.num_heads,
+            dropout=self.attention_dropout
+        )
 
     def call(self, inputs):
         encoder_inputs, decoder_inputs = inputs
@@ -486,7 +485,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         x = self.layer_norm1(encoder_inputs)
         x = self.attn(x, x)
         x = self.dropout(x)
-        x = x + inputs
+        x = x + encoder_inputs
 
         y = self.layer_norm2(x)
         y = self.attn(y, decoder_inputs)
@@ -516,7 +515,6 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
             {
                 "project_dim": self.project_dim,
                 "mlp_dim": self.mlp_dim,
-                "enc_dim": self.enc_dim,
                 "num_heads": self.num_heads,
                 "attention_dropout": self.attention_dropout,
                 "mlp_dropout": self.mlp_dropout,

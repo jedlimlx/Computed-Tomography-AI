@@ -30,6 +30,8 @@ class SinogramPatchEncoder(Layer):
         self.projection_dim = projection_dim
         self.mask_proportion = mask_proportion
 
+        self.embedding_type = embedding_type
+
         self.num_mask = int(num_patches * mask_proportion)
 
         # projection
@@ -107,8 +109,7 @@ class SinogramPatchEncoder(Layer):
             'num_patches': self.num_patches,
             'projection_dim': self.projection_dim,
             'embedding_type': self.embedding_type,
-            'mask_proportion': self.mask_proportion,
-            'downstream': self.downstream
+            'mask_proportion': self.mask_proportion
         })
         return cfg
 
@@ -362,8 +363,8 @@ if __name__ == "__main__":
         dec_mlp_units=2048,
         mask_ratio=0.75
     )
-    model.compile(optimizer=keras_core.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
-    model.call(keras_core.random.normal(shape=(1, 1024, 513, 1)))
+    model.compile(optimizer=keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
+    print(model.call(keras.random.random.normal(shape=(1, 1024, 513, 1))))
     model.summary()
 
     model.save_weights("model.weights.h5")
