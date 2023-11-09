@@ -62,7 +62,6 @@ class HybridModel(Model):
             TransformerDecoder(
                 project_dim=self.dec_dim,
                 num_heads=self.dec_heads,
-                enc_dim=self.autoencoder.enc_dim,
                 mlp_dim=self.dec_mlp_units,
                 mlp_dropout=self.autoencoder.dropout,
                 attention_dropout=self.autoencoder.dropout,
