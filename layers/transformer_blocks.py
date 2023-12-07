@@ -365,7 +365,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
 
         y = self.dense1(y)
         if self.activation == keras.activations.gelu:
-            y = self.activation(y, approximate=True)
+            y = self.activation(y, approximate=False)  # todo change back
         else:
             y = self.activation(y)
         y = self.dropout(y)
@@ -501,7 +501,7 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         z = self.layer_norm3(y)
         z = self.dense1(z)
         if self.activation == keras.activations.gelu:
-            z = self.activation(z, approximate=True)
+            z = self.activation(z, approximate=False)  # todo change back
         else:
             z = self.activation(z)
 
