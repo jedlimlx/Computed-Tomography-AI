@@ -26,6 +26,7 @@ class DirectReconstructionModel(Model):
             output_x_patches=16,
             output_y_patches=16,
             dropout=0.,
+            layer_norm_epsilon=1e-5,
             activation='gelu',
             divide_heads=True,
             name='ctransformer0',
@@ -56,6 +57,7 @@ class DirectReconstructionModel(Model):
         self.output_projection = output_projection
 
         self.dropout = dropout
+        self.layer_norm_epsilon = layer_norm_epsilon
         self.activation = activation
 
         self.final_shape = final_shape
@@ -90,6 +92,7 @@ class DirectReconstructionModel(Model):
                 attention_dropout=dropout,
                 activation=activation,
                 divide_heads=divide_heads,
+                layer_norm_epsilon=layer_norm_epsilon,
                 name=f"{name}_enc_block_{i}"
             ) for i in range(enc_layers)
         ]
@@ -104,15 +107,16 @@ class DirectReconstructionModel(Model):
                 attention_dropout=dropout,
                 activation=activation,
                 divide_heads=divide_heads,
+                layer_norm_epsilon=layer_norm_epsilon,
                 name=f"{name}_dec_block_{i}"
             ) for i in range(dec_layers)
         ]
 
         # final decoder layers
-        self.output_projection = Dense(
-            dec_dim,
-            name=f'{name}_output_projection'
-        )
+        self.output_projection = Sequential([
+            LayerNormalization(epsilon=layer_norm_epsilon, name=f'{name}_output_projection_norm'),
+            Dense(dec_dim, name=f'{name}_output_projection_dense'),
+        ], name=f'{name}_output_projection')
 
         self.patch_decoder = PatchDecoder(
             output_patch_width,
