@@ -221,14 +221,7 @@ class MaskedSinogramAutoencoder(Model):
             name=f'{name}_depatchify'
         )
 
-    def call(self, inputs, denoised_inputs=None, training=None, mask=None):
-        patches = self.patches(inputs)
-
-        if denoised_inputs is None:
-            denoised_patches = patches
-        else:
-            denoised_patches = self.patches(denoised_inputs)
-
+    def encoder_impl(self, patches):
         # Encode the patches.
         (
             unmasked_embeddings,
@@ -248,6 +241,18 @@ class MaskedSinogramAutoencoder(Model):
         # Create the decoder inputs.
         encoder_outputs = encoder_outputs + unmasked_positions
         decoder_inputs = ops.concatenate([encoder_outputs, masked_embeddings], axis=1)
+
+        return decoder_inputs, mask_indices, unmask_indices
+
+    def call(self, inputs, denoised_inputs=None, training=None, mask=None):
+        patches = self.patches(inputs)
+
+        if denoised_inputs is None:
+            denoised_patches = patches
+        else:
+            denoised_patches = self.patches(denoised_inputs)
+
+        decoder_inputs, mask_indices, unmask_indices = self.encoder_impl(patches)
 
         # Decode the inputs.
         decoder_outputs = self.decoder_projection(decoder_inputs)
@@ -368,7 +373,7 @@ if __name__ == "__main__":
         mask_ratio=0.75
     )
     model.compile(optimizer=keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=1e-5), loss='mse')
-    print(model.call(keras.random.random.normal(shape=(1, 1024, 513, 1))))
+    print(model.call(keras.random.normal(shape=(1, 1024, 513, 1))))
     model.summary()
 
     model.save_weights("model.weights.h5")

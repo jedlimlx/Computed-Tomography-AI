@@ -91,7 +91,7 @@ class HybridModel(Model):
         self.autoencoder.patch_encoder.num_mask = self.num_mask
 
     def call(self, inputs, training=None, mask=None):
-        x, mask_indices, unmask_indices, y = inputs
+        x,  y = inputs
 
         # Convert to patches and encode
         x = self.autoencoder.patches(x)
@@ -101,7 +101,7 @@ class HybridModel(Model):
             masked_embeddings,
             unmasked_positions,
             _, _
-        ) = self.autoencoder.patch_encoder(x, mask_indices=mask_indices, unmask_indices=unmask_indices)
+        ) = self.autoencoder.patch_encoder(x)
 
         # Pass the unmasked patches to the encoder.
         encoder_outputs = unmasked_embeddings
@@ -163,13 +163,10 @@ if __name__ == "__main__":
     rand_indices = tf.argsort(
         tf.random.uniform(shape=(1, 1024)), axis=-1
     )
-    mask_indices = rand_indices[:, : 0]
-    unmask_indices = rand_indices[:, 0:]
     model.call(
         (
             tf.random.normal(shape=(1, 1024, 513, 1)),
-            mask_indices,
-            unmask_indices,
             tf.random.normal(shape=(1, 512, 512, 1))
         )
     )
+    print(model.summary())
