@@ -84,7 +84,7 @@ def map_coordinates(
         raise NotImplementedError("map_coordinates currently requires order<=1")
 
     valid_1d_interpolations = []
-    for coordinate, size in zip(coordinate_arrs, input_arr.shape):
+    for coordinate, size in zip(coordinate_arrs, tf.shape(input_arr)):
         interp_nodes = interp_fun(coordinate)
         valid_interp = []
         for index, weight in interp_nodes:
