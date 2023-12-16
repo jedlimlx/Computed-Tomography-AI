@@ -1,6 +1,7 @@
 from keras import ops
 from keras.layers import *
 import numpy as np
+from utils.map_coordinates import map_coordinates
 
 
 class PolarTransformBase(Layer):
@@ -19,7 +20,7 @@ class PolarTransformBase(Layer):
         img = ops.reshape(img, (-1, inputs.shape[1], inputs.shape[2]))
         coordinates = self._get_batch_coordinates_and_stack_coordinate_grid(ops.shape(img)[0], self.coord_1,
                                                                             self.coord_2)
-        out = ops.image.map_coordinates(img, coordinates, order=self.order, fill_mode='nearest', fill_value=0)
+        out = map_coordinates(img, coordinates, order=self.order, fill_mode='nearest', fill_value=0)
         out = ops.reshape(out, (-1, inputs.shape[3], out.shape[1], out.shape[2]))
         out = ops.transpose(out, (0, 2, 3, 1))
         return out
@@ -36,6 +37,7 @@ class PolarTransformBase(Layer):
 
 class PolarTransform(PolarTransformBase):
     def build(self, input_shape):
+        super().build(input_shape)
         self.input_shape = input_shape
         center = self.center or (input_shape[1] / 2, input_shape[2] / 2)
         max_radius = self.max_radius or np.sqrt(input_shape[1] ** 2 + input_shape[2] ** 2) / 2
@@ -53,6 +55,7 @@ class PolarTransform(PolarTransformBase):
 
 class InvPolarTransform(PolarTransformBase):
     def build(self, input_shape):
+        super().build(input_shape)
         self.input_shape = input_shape
         center = self.center or (self.out_shape[0] / 2, self.out_shape[1] / 2)
         max_radius = self.max_radius or np.sqrt(self.out_shape[0] ** 2 + self.out_shape[1] ** 2) / 2
