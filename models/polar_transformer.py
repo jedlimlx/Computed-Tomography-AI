@@ -170,7 +170,7 @@ if __name__ == '__main__':
             ipt_when_testing=True,
         )
         model.compile(loss='mse', optimizer=optimizers.AdamW(learning_rate=1e-4, weight_decay=1e-5))
-        model.build(((1, 1024, 513, 1), (1, 512, 512, 1)))
+        model.build(((None, 1024, 513, 1), (None, 512, 512, 1)))
 
         model.fit(train_ds, validation_data=test_ds, steps_per_epoch=1, validation_steps=1, epochs=1)
 
