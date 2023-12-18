@@ -21,6 +21,7 @@ class HybridModel(Model):
             output_y_patches=16,
             final_shape=(362, 362, 1),
             divide_heads=True,
+            dec_embedding_type='learned',
             name=None,
             **kwargs
     ):
@@ -54,7 +55,7 @@ class HybridModel(Model):
         self.patch_encoder = PatchEncoder(
             self.output_y_patches * self.output_x_patches,
             self.dec_dim,
-            embedding_type='learned',
+            embedding_type=dec_embedding_type,
             name='dec_projection'
         )
 
