@@ -1,6 +1,7 @@
 import keras.ops as ops
 from keras.layers import *
 from keras.models import *
+import keras
 
 from layers import Patches, PatchEncoder, PatchDecoder, TransformerDecoder
 
@@ -53,7 +54,7 @@ class HybridModel(Model):
         self.patch_encoder = PatchEncoder(
             self.output_y_patches * self.output_x_patches,
             self.dec_dim,
-            embedding_type='sin_cos',
+            embedding_type='learned',
             name='dec_projection'
         )
 
@@ -155,10 +156,19 @@ if __name__ == "__main__":
         dec_mlp_units=512,
         output_patch_height=16,
         output_patch_width=16,
-        output_x_patches=16,
-        output_y_patches=16,
+        output_x_patches=32,
+        output_y_patches=32,
         final_shape=(362, 362, 1),
     )
+
+    def transform(_):
+        x = tf.random.normal((1, 1024, 513, 1))
+        y = tf.random.normal((1, 10, 10, 1))
+
+        return (x, tf.image.resize(y, (512, 512))), tf.image.resize(y, (362, 362))
+
+    train_ds = tf.data.Dataset.random(1).map(transform)
+    test_ds = tf.data.Dataset.random(1).map(transform)
 
     rand_indices = tf.argsort(
         tf.random.uniform(shape=(1, 1024)), axis=-1
@@ -170,3 +180,7 @@ if __name__ == "__main__":
         )
     )
     print(model.summary())
+
+    model.compile(optimizer=keras.optimizers.AdamW(learning_rate=1e-4, weight_decay=1e-5), loss='mse')
+    model.fit(train_ds, validation_data=test_ds, steps_per_epoch=100, validation_steps=10, epochs=1)
+    

@@ -162,17 +162,10 @@ class PositionEmbedding(Layer):
 
     def call(self, inputs, start_index=0):
         shape = ops.shape(inputs)
-        feature_length = shape[-1]
-        sequence_length = shape[-2]
         # trim to match the length of the input sequence, which might be less
         # than the sequence_length of the layer.
         position_embeddings = ops.convert_to_tensor(self.position_embeddings)
-        position_embeddings = ops.slice(
-            position_embeddings,
-            (start_index, 0),
-            (sequence_length, feature_length),
-        )
-        return ops.broadcast_to(position_embeddings, shape)
+        return ops.broadcast_to(position_embeddings, shape) + inputs
 
     def compute_output_shape(self, input_shape):
         return input_shape
