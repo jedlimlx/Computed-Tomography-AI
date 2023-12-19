@@ -96,7 +96,7 @@ with strategy.scope():
     # model.load_weights("../input/ctransformer-masked-sinogram-autoencoder/mae_model.weights.h5")
 
     print("\nTraining with real data...")
-    history = model.fit(train_ds, validation_data=val_ds, epochs=1, steps_per_epoch=1)
+    history = model.fit(train_ds, validation_data=val_ds, epochs=100)
 
     model.save_weights("mae_model.weights.h5")
     model.save("mae_model.keras")
