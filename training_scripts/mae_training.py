@@ -4,11 +4,13 @@ os.environ['TPU_NAME'] = 'local'
 os.environ['KERAS_BACKEND'] = 'tensorflow'
 os.environ['NEXT_PLUGGABLE_DEVICE_USE_C_API'] = 'true'
 os.environ['TF_PLUGGABLE_DEVICE_LIBRARY_PATH'] = '/lib/libtpu.so'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 
 import tensorflow as tf
 import keras
 
 from models.masked_sinogram_autoencoder import MaskedSinogramAutoencoder
+import pandas as pd
 
 cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
 tf.config.experimental_connect_to_cluster(cluster_resolver)
@@ -67,10 +69,10 @@ with strategy.scope():
         sinogram_width=513,
         sinogram_height=1,
         input_shape=(1024, 513, 1),
-        enc_dim=512,
-        enc_mlp_units=512 * 4,
-        dec_dim=512,
-        dec_mlp_units=512 * 4,
+        enc_dim=1024,
+        enc_mlp_units=1024 * 4,
+        dec_dim=1024,
+        dec_mlp_units=1024 * 4,
         mask_ratio=0.75,
         radon_transform=None,
         dose=-1
@@ -94,7 +96,10 @@ with strategy.scope():
     # model.load_weights("../input/ctransformer-masked-sinogram-autoencoder/mae_model.weights.h5")
 
     print("\nTraining with real data...")
-    model.fit(train_ds, validation_data=val_ds, epochs=1, steps_per_epoch=1)
+    history = model.fit(train_ds, validation_data=val_ds, epochs=1, steps_per_epoch=1)
 
     model.save_weights("mae_model.weights.h5")
     model.save("mae_model.keras")
+
+    df = pd.DataFrame(data=history.history)
+    df.to_csv("mae_model.csv")
