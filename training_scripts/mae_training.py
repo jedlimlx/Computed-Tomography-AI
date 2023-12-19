@@ -54,7 +54,7 @@ train_ds = (tf.data.TFRecordDataset('gs://kds-febc291acaf8a01d21fe4181d8835d0cb9
             .map(transform))
 
 val_ds = (tf.data.TFRecordDataset('gs://kds-bb472b8b8411cc589272ec67c8152102bcf14429f2c5e7af07ab24aa'
-                                  '/lodopab_valiation.tfrecord')
+                                  '/lodopab_validation.tfrecord')
           .map(_parse_example)
           .batch(GLOBAL_BATCH_SIZE)
           .prefetch(tf.data.AUTOTUNE)
@@ -94,7 +94,7 @@ with strategy.scope():
     # model.load_weights("../input/ctransformer-masked-sinogram-autoencoder/mae_model.weights.h5")
 
     print("\nTraining with real data...")
-    model.fit(train_ds, validation_data=val_ds, epochs=100)
+    model.fit(train_ds, validation_data=val_ds, epochs=1, steps_per_epoch=1)
 
-    model.save_weights("~/mae_model.weights.h5")
-    model.save("~/mae_model.keras")
+    model.save_weights("mae_model.weights.h5")
+    model.save("mae_model.keras")
