@@ -58,6 +58,9 @@ class PolarTransformer(Model):
             for i in range(dec_blocks)
         ]
 
+        self.sinogram_encoder.trainable = False
+        self.sinogram_encoder.patch_encoder.num_mask = 0
+
     def build(self, input_shape):
         if not self.polar_transform.built:
             self.polar_transform.build(input_shape[1])
@@ -75,7 +78,7 @@ class PolarTransformer(Model):
 
         for block in self.decoder_blocks:
             y = block((y, x))
-        return y
+        return ops.expand_dims(y, -1)
 
     def train_step(self, data):
         inp, gt = data
@@ -101,7 +104,7 @@ class PolarTransformer(Model):
             if metric.name == "loss":
                 metric.update_state(loss)
             else:
-                metric.update_state(y=gt, y_pred=output)
+                metric.update_state(gt, output)
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -114,7 +117,7 @@ class PolarTransformer(Model):
 
         output = self((sinogram, fbp))
         if self.ipt_when_testing:
-            output = self.inv_polar_transform(output[..., tf.newaxis])
+            output = self.inv_polar_transform(output)
 
         loss = self.compute_loss(y=gt, y_pred=output)
 
@@ -124,7 +127,7 @@ class PolarTransformer(Model):
             if metric.name == "loss":
                 metric.update_state(loss)
             else:
-                metric.update_state(y=gt, y_pred=output)
+                metric.update_state(gt, output)
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -139,12 +142,13 @@ if __name__ == '__main__':
         from keras import optimizers
 
         def transform(_):
-            x = tf.random.normal(shape=(1, 1024, 513, 1))
-            y = tf.random.normal(shape=(1, 512, 512, 1))
+            x = tf.random.normal(shape=(2, 1024, 513, 1))
+            y = tf.random.normal(shape=(2, 512, 512, 1))
             return (x, y), tf.image.resize(y, (362, 362))
 
         train_ds = tf.data.Dataset.random(seed=1).map(transform)
-        test_ds = tf.data.Dataset.random(seed=1).map(transform)
+        val_ds = tf.data.Dataset.random(seed=1).map(transform)
+        test_ds = tf.data.Dataset.random(seed=1).map(transform).map(lambda x, y: x)
 
         autoencoder = MaskedSinogramAutoencoder(
             enc_layers=4,
@@ -152,9 +156,9 @@ if __name__ == '__main__':
             sinogram_width=513,
             sinogram_height=1,
             input_shape=(1024, 513, 1),
-            enc_dim=512,
+            enc_dim=1024,
             enc_mlp_units=2048,
-            dec_dim=512,
+            dec_dim=1024,
             dec_mlp_units=2048,
             mask_ratio=0.75
         )
@@ -162,7 +166,7 @@ if __name__ == '__main__':
             autoencoder,
             out_shape=(362, 362),
             dec_blocks=1,
-            dec_dim=512,
+            dec_dim=1024,
             dec_heads=16,
             dropout=0.,
             layer_norm_epsilon=1e-5,
@@ -172,7 +176,6 @@ if __name__ == '__main__':
         model.compile(loss='mse', optimizer=optimizers.AdamW(learning_rate=1e-4, weight_decay=1e-5))
         model.build(((None, 1024, 513, 1), (None, 512, 512, 1)))
 
-        model.fit(train_ds, validation_data=test_ds, steps_per_epoch=1, validation_steps=1, epochs=1)
-
+        print(model.summary())
 
     test()
