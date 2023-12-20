@@ -115,7 +115,7 @@ class DirectReconstructionModel(Model):
         # final decoder layers
         self.output_projection = Sequential([
             LayerNormalization(epsilon=layer_norm_epsilon, name=f'{name}_output_projection_norm'),
-            Dense(dec_dim, name=f'{name}_output_projection_dense'),
+            Dense(output_patch_width * output_patch_height, name=f'{name}_output_projection_dense'),
         ], name=f'{name}_output_projection')
 
         self.patch_decoder = PatchDecoder(
