@@ -2,10 +2,10 @@ import tensorflow as tf
 from keras.models import *
 from keras import ops
 
-from layers import Patches, PatchEncoder, TransformerDecoder, PolarTransform, InvPolarTransform
+from layers import TransformerEncoder, PolarTransform, InvPolarTransform
 
 
-class PolarTransformer(Model):
+class PolarDirectReco(Model):
     def __init__(
             self,
             sinogram_encoder,
@@ -21,31 +21,22 @@ class PolarTransformer(Model):
             **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.sinogram_encoder = sinogram_encoder
         self.dec_dim = dec_dim
-
+        self.out_shape = out_shape
+        self.sinogram_encoder = sinogram_encoder
+        self.ipt_when_training = ipt_when_training
+        self.ipt_when_testing = ipt_when_testing
         self.polar_transform = PolarTransform(
             (sinogram_encoder.inp_shape[0], dec_dim),
             name=f'{self.name}-polar_transform'
         )
-
-        self.ipt_when_training = ipt_when_training
-        self.ipt_when_testing = ipt_when_testing
         self.inv_polar_transform = InvPolarTransform(
             out_shape,
             name=f'{self.name}-inverse_polar_transform'
         )
 
-        self.fbp_patches = Patches(dec_dim, 1, name=f'{self.name}-fbp_patches')
-        self.fbp_patch_encoder = PatchEncoder(
-            num_patches=sinogram_encoder.inp_shape[0],
-            projection_dim=dec_dim,
-            embedding_type='sin_cos',
-            name=f'{self.name}-fbp_patch_encoder'
-        )
-
         self.decoder_blocks = [
-            TransformerDecoder(
+            TransformerEncoder(
                 project_dim=dec_dim,
                 num_heads=dec_heads,
                 mlp_dim=dec_dim * 4,
@@ -58,40 +49,33 @@ class PolarTransformer(Model):
             for i in range(dec_blocks)
         ]
 
-        self.sinogram_encoder.trainable = False
-        self.sinogram_encoder.patch_encoder.num_mask = 0
-
     def build(self, input_shape):
         if not self.polar_transform.built:
-            self.polar_transform.build(input_shape[1])
+            self.polar_transform.build(input_shape)
         if not self.inv_polar_transform.built:
-            self.inv_polar_transform.build((input_shape[1][0], self.sinogram_encoder.inp_shape[0], self.dec_dim))
+            self.inv_polar_transform.build((self.out_shape, self.sinogram_encoder.inp_shape[0], self.dec_dim))
         self.built = True
 
-    def call(self, inputs, *args, **kwargs):
-        x, y = inputs
+    def call(self, x, *args, **kwargs):
         x = self.sinogram_encoder.patches(x)
         x, _, _ = self.sinogram_encoder.encoder_impl(x)
-        y = self.polar_transform(y)
-        y = self.fbp_patches(y)
-        y = self.fbp_patch_encoder(y)
 
+        y = x
         for block in self.decoder_blocks:
-            y = block((y, x))
+            y = block(y)
+
         return ops.expand_dims(y, -1)
 
     def train_step(self, data):
-        inp, gt = data
-        sinogram, fbp = inp
+        sinogram, gt = data
 
         if not self.ipt_when_training:
             gt = self.polar_transform(gt)
 
         with tf.GradientTape() as tape:
-            output = self((sinogram, fbp))
-
+            output = self(sinogram)
             if self.ipt_when_training:
-                output = self.inv_polar_transform(output[..., tf.newaxis])
+                output = self.inv_polar_transform(output)
 
             loss = self.compute_loss(y=gt, y_pred=output)
 
@@ -109,13 +93,12 @@ class PolarTransformer(Model):
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
-        inp, gt = data
-        sinogram, fbp = inp
+        sinogram, gt = data
 
         if not self.ipt_when_testing:
             gt = self.polar_transform(gt)
 
-        output = self((sinogram, fbp))
+        output = self(sinogram)
         if self.ipt_when_testing:
             output = self.inv_polar_transform(output)
 
@@ -143,12 +126,11 @@ if __name__ == '__main__':
 
         def transform(_):
             x = tf.random.normal(shape=(2, 1024, 513, 1))
-            y = tf.random.normal(shape=(2, 512, 512, 1))
-            return (x, y), tf.image.resize(y, (362, 362))
+            y = tf.random.normal(shape=(2, 362, 362, 1))
+            return x, y
 
         train_ds = tf.data.Dataset.random(seed=1).map(transform)
         val_ds = tf.data.Dataset.random(seed=1).map(transform)
-        test_ds = tf.data.Dataset.random(seed=1).map(transform).map(lambda x, y: x)
 
         autoencoder = MaskedSinogramAutoencoder(
             enc_layers=4,
@@ -162,7 +144,7 @@ if __name__ == '__main__':
             dec_mlp_units=2048,
             mask_ratio=0.75
         )
-        model = PolarTransformer(
+        model = PolarDirectReco(
             autoencoder,
             out_shape=(362, 362),
             dec_blocks=1,
@@ -175,7 +157,10 @@ if __name__ == '__main__':
         )
         model.compile(loss='mse', optimizer=optimizers.AdamW(learning_rate=1e-4, weight_decay=1e-5))
         model.build(((None, 1024, 513, 1), (None, 512, 512, 1)))
+        model.fit(train_ds, validation_data=val_ds, steps_per_epoch=1, validation_steps=1)
 
         print(model.summary())
 
+
     test()
+
