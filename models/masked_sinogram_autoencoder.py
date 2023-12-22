@@ -76,15 +76,19 @@ class SinogramPatchEncoder(Layer):
 
         # Repeat the mask token number of mask times.
         # Mask tokens replace the masks of the image.
-        mask_tokens = ops.repeat(self.mask_token, repeats=self.num_mask, axis=0)
-        mask_tokens = ops.repeat(
-            ops.expand_dims(
-                mask_tokens, axis=0
-            ), repeats=batch_size, axis=0
-        )
+        if self.num_mask != 0:
+            mask_tokens = ops.repeat(self.mask_token, repeats=self.num_mask, axis=0)
+            mask_tokens = ops.repeat(
+                ops.expand_dims(
+                    mask_tokens, axis=0
+                ), repeats=batch_size, axis=0
+            )
 
-        # Get the masked embeddings for the tokens.
-        masked_embeddings = self.projection(mask_tokens) + masked_positions
+            # Get the masked embeddings for the tokens.
+            masked_embeddings = self.projection(mask_tokens) + masked_positions
+        else:
+            masked_embeddings = ops.zeros((batch_size, 0, self.projection_dim), dtype=self.dtype)
+
         return (
             unmasked_embeddings,  # Input to the encoder.
             masked_embeddings,  # First part of input to the decoder.

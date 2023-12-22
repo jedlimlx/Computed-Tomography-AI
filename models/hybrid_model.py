@@ -97,25 +97,7 @@ class HybridModel(Model):
 
         # Convert to patches and encode
         x = self.autoencoder.patches(x)
-
-        (
-            unmasked_embeddings,
-            masked_embeddings,
-            unmasked_positions,
-            _, _
-        ) = self.autoencoder.patch_encoder(x)
-
-        # Pass the unmasked patches to the encoder.
-        encoder_outputs = unmasked_embeddings
-
-        for enc_block in self.autoencoder.encoder:
-            encoder_outputs = enc_block(encoder_outputs)
-
-        encoder_outputs = self.autoencoder.enc_norm(encoder_outputs)
-
-        # Create the decoder inputs.
-        encoder_outputs = encoder_outputs + unmasked_positions
-        x = ops.concatenate([encoder_outputs, masked_embeddings], axis=1)
+        x, _, _ = self.autoencoder.encoder_impl(x)
 
         y = self.patches(y)
         y = self.patch_encoder(y)
