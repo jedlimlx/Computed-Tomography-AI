@@ -5,13 +5,13 @@ import os
 import numpy as np
 import warnings
 
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras import backend as K
+from keras.callbacks import Callback
+from keras.optimizers.schedules import LearningRateSchedule
 import tensorflow as tf
 
 
 # Code is ported from https://github.com/fastai/fastai
-class CLR(tf.keras.optimizers.schedules.LearningRateSchedule):
+class CLR(LearningRateSchedule):
     def __init__(self, num_samples, batch_size, epochs, max_lr, end_percentage):
         super(CLR, self).__init__()
 
@@ -31,18 +31,18 @@ class CLR(tf.keras.optimizers.schedules.LearningRateSchedule):
         current_percentage = (step - 2 * self.mid_cycle_id)
         current_percentage /= float((self.total_steps - 2 * self.mid_cycle_id))
         new_lr1 = self.max_lr * (1. + (current_percentage *
-                                          (1. - 100.) / 100.)) * self.scale
+                                       (1. - 100.) / 100.)) * self.scale
         pred_fn_pairs.append((step > 2 * self.mid_cycle_id, lambda: new_lr1))
 
         current_percentage = 1. - (
-            step - self.mid_cycle_id) / self.mid_cycle_id
+                step - self.mid_cycle_id) / self.mid_cycle_id
         new_lr2 = self.max_lr * (1. + current_percentage *
-                                    (self.scale * 100 - 1.)) * self.scale
+                                 (self.scale * 100 - 1.)) * self.scale
         pred_fn_pairs.append((step > self.mid_cycle_id, lambda: new_lr2))
 
         current_percentage = step / self.mid_cycle_id
         new_lr3 = self.max_lr * (1. + current_percentage *
-                                    (self.scale * 100 - 1.)) * self.scale
+                                 (self.scale * 100 - 1.)) * self.scale
 
         return tf.case(pred_fn_pairs, default=lambda: new_lr3)
 
@@ -154,7 +154,7 @@ class LRFinder(Callback):
 
         if lr_scale == 'exp':
             self.lr_multiplier_ = (maximum_lr / float(minimum_lr)) ** (
-                1. / float(self.num_batches_))
+                    1. / float(self.num_batches_))
         else:
             extra_batch = int((num_samples % batch_size) != 0)
             self.lr_multiplier_ = np.linspace(
@@ -174,7 +174,7 @@ class LRFinder(Callback):
     def on_train_begin(self, logs=None):
 
         self.current_epoch_ = 1
-        K.set_value(self.model.optimizer.lr, self.initial_lr)
+        self.model.optimizer.learning_rate.assign(self.initial_lr)
 
         warnings.simplefilter("ignore")
 
@@ -213,9 +213,9 @@ class LRFinder(Callback):
 
         # smooth the loss value and bias correct
         running_loss = self.loss_smoothing_beta * loss + (
-            1. - self.loss_smoothing_beta) * loss
+                1. - self.loss_smoothing_beta) * loss
         running_loss = running_loss / (
-            1. - self.loss_smoothing_beta**self.current_batch_)
+                1. - self.loss_smoothing_beta ** self.current_batch_)
 
         # stop logging if loss is too large
         if self.current_batch_ > 1 and self.stopping_criterion_factor is not None and (
@@ -230,7 +230,7 @@ class LRFinder(Callback):
         if running_loss < self.best_loss_ or self.current_batch_ == 1:
             self.best_loss_ = running_loss
 
-        current_lr = K.get_value(self.model.optimizer.lr)
+        current_lr = self.model.optimizer.learning_rate
 
         self.history.setdefault('running_loss_', []).append(running_loss)
         if self.lr_scale == 'exp':
@@ -244,7 +244,7 @@ class LRFinder(Callback):
         else:
             current_lr = self.lr_multiplier_[self.current_batch_ - 1]
 
-        K.set_value(self.model.optimizer.lr, current_lr)
+        self.model.optimizer.learning_rate.assign(current_lr)
 
         # save the other metrics as well
         for k, v in logs.items():
@@ -253,7 +253,7 @@ class LRFinder(Callback):
         if self.verbose:
             if self.use_validation_set:
                 print(" - LRFinder: val_loss: %1.4f - lr = %1.8f " %
-                      (values[0], current_lr))
+                      (values[0], current_lr))  # noqa
             else:
                 print(" - LRFinder: lr = %1.8f " % current_lr)
 

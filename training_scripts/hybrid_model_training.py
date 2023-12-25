@@ -14,6 +14,7 @@ import tensorflow as tf
 from metrics import SSIM, PSNR
 from models.masked_sinogram_autoencoder import MaskedSinogramAutoencoder
 from models.hybrid_model import HybridModel
+from keras.optimizers.schedules import CosineDecay
 
 cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
 tf.config.experimental_connect_to_cluster(cluster_resolver)
@@ -125,9 +126,15 @@ with strategy.scope():
     )
     mae.load_weights('mae_model.weights.h5')
 
-    # lr = tf.keras.optimizers.schedules.CosineDecayRestarts(1.6e-4, 3000)
+    lr = CosineDecay(
+        initial_learning_rate=4e-4,
+        warmup_target=4e-3,
+        alpha=1e-5,
+        warmup_steps=70 * 168,
+        decay_steps=70 * 392,
+    )
     model.compile(
-        optimizer=keras.optimizers.AdamW(weight_decay=1e-5, learning_rate=1e-4, beta_1=0.9, beta_2=0.95),
+        optimizer=keras.optimizers.AdamW(learning_rate=lr),
         loss="mse",
         metrics=[
             "mean_squared_error",
