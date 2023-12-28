@@ -7,6 +7,7 @@ os.environ['NEXT_PLUGGABLE_DEVICE_USE_C_API'] = 'true'
 os.environ['TF_PLUGGABLE_DEVICE_LIBRARY_PATH'] = '/lib/libtpu.so'
 
 import keras
+from keras.optimizers.schedules import CosineDecay
 import tensorflow as tf
 from metrics import PSNR, SSIM
 from models import DirectReconstructionModel
@@ -58,17 +59,17 @@ def _parse_example(example_proto):
     return observation, ground_truth
 
 
-train_ds = (tf.data.TFRecordDataset('gs://kds-febc291acaf8a01d21fe4181d8835d0cb95a786faae57be48addb7c5/lodopab_train'
+train_ds = (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab/lodopab_train'
                                     '.tfrecord')
             .map(_parse_example, num_parallel_calls=tf.data.AUTOTUNE)
             .batch(GLOBAL_BATCH_SIZE)
             .map(transform_denoise, num_parallel_calls=tf.data.AUTOTUNE))
-val_ds = (tf.data.TFRecordDataset('gs://kds-bb472b8b8411cc589272ec67c8152102bcf14429f2c5e7af07ab24aa/lodopab_validation'
+val_ds = (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_validation'
                                   '.tfrecord')
           .map(_parse_example, num_parallel_calls=tf.data.AUTOTUNE)
           .batch(GLOBAL_BATCH_SIZE)
           .map(transform_denoise, num_parallel_calls=tf.data.AUTOTUNE))
-test_ds = (tf.data.TFRecordDataset('gs://kds-bb472b8b8411cc589272ec67c8152102bcf14429f2c5e7af07ab24aa/lodopab_test'
+test_ds = (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_test'
                                    '.tfrecord')
            .map(_parse_example, num_parallel_calls=tf.data.AUTOTUNE)
            .batch(GLOBAL_BATCH_SIZE)
@@ -99,10 +100,24 @@ with strategy.scope():
 
     # lr = keras.optimizers.schedules.CosineDecay(1.6e-4, 4000)
 
+    model(tf.random.normal((1, 1024, 513, 1)))
+
+    lr = CosineDecay(
+        initial_learning_rate=1e-6,
+        warmup_target=1e-5,
+        alpha=1e-6,
+        warmup_steps=35840 / GLOBAL_BATCH_SIZE,
+        decay_steps=99 * 35840 / GLOBAL_BATCH_SIZE,
+    )
     model.compile(
-        optimizer=keras.optimizers.AdamW(learning_rate=1e-5, weight_decay=1e-6),
-        loss='mse',
-        metrics=[PSNR(mean=0.16737686, std=0.11505456), SSIM(mean=0.16737686, std=0.11505456)]
+        optimizer=keras.optimizers.AdamW(learning_rate=lr),
+        loss="mse",
+        metrics=[
+            "mean_squared_error",
+            "mean_absolute_error",
+            PSNR(rescaling=True, mean=0.16737686, std=0.11505456),
+            SSIM(rescaling=True, mean=0.16737686, std=0.11505456)
+        ]
     )
     model.summary()
 

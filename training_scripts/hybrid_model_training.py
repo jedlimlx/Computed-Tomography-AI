@@ -128,7 +128,7 @@ with strategy.scope():
     lr = CosineDecay(
         initial_learning_rate=1e-6,
         warmup_target=1e-5,
-        alpha=1e-5,
+        alpha=1e-6,
         warmup_steps=35840 / GLOBAL_BATCH_SIZE,
         decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
     )
