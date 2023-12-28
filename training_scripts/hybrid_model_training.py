@@ -79,14 +79,14 @@ train_ds_denoise = tf.data.Dataset.zip(
 val_ds_denoise = tf.data.Dataset.zip(
     (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_validation.tfrecord')
      .map(_parse_example),
-     tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_val_fbp.tfrecord')
+     tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-fbp/lodopab_val_fbp.tfrecord')
      .map(_parse_example_fbp))
 ).batch(GLOBAL_BATCH_SIZE).map(transform_denoise)
 
 test_ds_denoise = tf.data.Dataset.zip(
-    (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab/lodopab-valtestchallenge/lodopab_test.tfrecord')
+    (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_test.tfrecord')
      .map(_parse_example),
-     tf.data.TFRecordDataset('gs://kds-555befe60ae8e05df240da070fb2027a366af245fa86c8e40cce7ac5/lodopab_test_fbp'
+     tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-fbp/lodopab_test_fbp'
                              '.tfrecord').map(_parse_example_fbp))
 ).batch(GLOBAL_BATCH_SIZE).map(transform_denoise)
 
