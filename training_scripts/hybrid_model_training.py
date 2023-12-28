@@ -71,22 +71,21 @@ def _parse_example_fbp(example_proto):
 
 
 train_ds_denoise = tf.data.Dataset.zip(
-    (tf.data.TFRecordDataset('gs://kds-febc291acaf8a01d21fe4181d8835d0cb95a786faae57be48addb7c5/lodopab_train'
-                             '.tfrecord').map(_parse_example),
-     tf.data.TFRecordDataset('gs://kds-555befe60ae8e05df240da070fb2027a366af245fa86c8e40cce7ac5/lodopab_train_fbp'
-                             '.tfrecord').map(_parse_example_fbp))
+    (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab/lodopab_train.tfrecord').map(_parse_example),
+     tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-fbp/lodopab_train_fbp.tfrecord')
+     .map(_parse_example_fbp))
 ).batch(GLOBAL_BATCH_SIZE).map(transform_denoise)
 
 val_ds_denoise = tf.data.Dataset.zip(
-    (tf.data.TFRecordDataset('gs://kds-bb472b8b8411cc589272ec67c8152102bcf14429f2c5e7af07ab24aa/lodopab_validation'
-                             '.tfrecord').map(_parse_example),
-     tf.data.TFRecordDataset('gs://kds-555befe60ae8e05df240da070fb2027a366af245fa86c8e40cce7ac5/lodopab_val_fbp'
-                             '.tfrecord').map(_parse_example_fbp))
+    (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_validation.tfrecord')
+     .map(_parse_example),
+     tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab-valtestchallenge/lodopab_val_fbp.tfrecord')
+     .map(_parse_example_fbp))
 ).batch(GLOBAL_BATCH_SIZE).map(transform_denoise)
 
 test_ds_denoise = tf.data.Dataset.zip(
-    (tf.data.TFRecordDataset('gs://kds-bb472b8b8411cc589272ec67c8152102bcf14429f2c5e7af07ab24aa/lodopab_test'
-                             '.tfrecord').map(_parse_example),
+    (tf.data.TFRecordDataset('gs://computed-tomography-ai/data/lodopab/lodopab-valtestchallenge/lodopab_test.tfrecord')
+     .map(_parse_example),
      tf.data.TFRecordDataset('gs://kds-555befe60ae8e05df240da070fb2027a366af245fa86c8e40cce7ac5/lodopab_test_fbp'
                              '.tfrecord').map(_parse_example_fbp))
 ).batch(GLOBAL_BATCH_SIZE).map(transform_denoise)
@@ -127,11 +126,11 @@ with strategy.scope():
     mae.load_weights('mae_model.weights.h5')
 
     lr = CosineDecay(
-        initial_learning_rate=4e-4,
-        warmup_target=4e-3,
+        initial_learning_rate=1e-6,
+        warmup_target=1e-5,
         alpha=1e-5,
-        warmup_steps=70 * 168,
-        decay_steps=70 * 392,
+        warmup_steps=35840 / GLOBAL_BATCH_SIZE,
+        decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
     )
     model.compile(
         optimizer=keras.optimizers.AdamW(learning_rate=lr),
