@@ -105,7 +105,7 @@ with strategy.scope():
         dec_heads=16,
         dropout=0.,
         layer_norm_epsilon=1e-5,
-        ipt_when_training=False,
+        ipt_when_training=True,
         ipt_when_testing=True,
     )
 
@@ -131,11 +131,12 @@ with strategy.scope():
         ]
     )
 
-    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=1, steps_per_epoch=20, validation_steps=20)
+    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70)
     training_df = pd.DataFrame(data=training_history.history)
     training_df.to_csv("polar_transformer_training.csv")
 
     # unfreeze mae and finetune
+    # model.load_weights('polar_transformer.weights.h5')
     # autoencoder.trainable = True
     # model.compile(
     #     optimizer=keras.optimizers.AdamW(weight_decay=1e-6, learning_rate=1e-5, beta_1=0.9, beta_2=0.95),

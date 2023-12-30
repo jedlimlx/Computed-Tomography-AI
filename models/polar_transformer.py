@@ -91,7 +91,7 @@ class PolarTransformer(Model):
             output = self((sinogram, fbp))
 
             if self.ipt_when_training:
-                output = self.inv_polar_transform(output[..., tf.newaxis])
+                output = self.inv_polar_transform(output)
 
             loss = self.compute_loss(y=gt, y_pred=output)
 
