@@ -103,6 +103,7 @@ with strategy.scope():
         dec_blocks=4,
         dec_dim=1024,
         dec_heads=16,
+        polar_mode='edge',
         dropout=0.,
         layer_norm_epsilon=1e-5,
         ipt_when_training=True,

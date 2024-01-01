@@ -5,12 +5,13 @@ from utils.interpolate_bilinear import interpolate_bilinear
 
 
 class PolarTransformBase(Layer):
-    def __init__(self, out_shape, center=None, max_radius=None, order=1, *args, **kwargs):
+    def __init__(self, out_shape, center=None, max_radius=None, theta_range=None, order=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.out_shape = out_shape
         self.order = order
         self.center = center
         self.max_radius = max_radius
+        self.theta_range = theta_range
         self.input_shape = None
         self.coordinates = None
 
@@ -28,10 +29,16 @@ class PolarTransform(PolarTransformBase):
         self.input_shape = input_shape
         center = self.center or (input_shape[1] / 2, input_shape[2] / 2)
         max_radius = self.max_radius or np.sqrt(input_shape[1] ** 2 + input_shape[2] ** 2) / 2
-        k_theta = self.out_shape[0] / (2 * np.pi)
+
+        if self.theta_range is not None:
+            k_theta = self.out_shape[0] / (self.theta_range[1] - self.theta_range[0])
+        else:
+            k_theta = self.out_shape[0] / (2 * np.pi)
         k_r = self.out_shape[1] / max_radius
 
         theta = ops.arange(self.out_shape[0], dtype=self.dtype) / k_theta
+        if self.theta_range is not None:
+            theta += self.theta_range[0]
         theta = ops.reshape(theta, (-1, 1))
         r = ops.arange(self.out_shape[1], dtype=self.dtype) / k_r
         r = ops.reshape(r, (1, -1))
@@ -52,7 +59,10 @@ class InvPolarTransform(PolarTransformBase):
         center = self.center or (self.out_shape[0] / 2, self.out_shape[1] / 2)
         max_radius = self.max_radius or np.sqrt(self.out_shape[0] ** 2 + self.out_shape[1] ** 2) / 2
 
-        k_theta = self.input_shape[1] / (2 * np.pi)
+        if self.theta_range is not None:
+            k_theta = self.input_shape[1] / (self.theta_range[1] - self.theta_range[0])
+        else:
+            k_theta = self.input_shape[1] / (2 * np.pi)
         k_r = self.input_shape[2] / max_radius
 
         x = ops.arange(self.out_shape[0], dtype=self.dtype) - center[0]
@@ -60,7 +70,10 @@ class InvPolarTransform(PolarTransformBase):
         y = ops.arange(self.out_shape[1], dtype=self.dtype) - center[1]
         y = ops.reshape(y, (1, -1))
 
-        coord_1 = k_theta * ops.mod(ops.arctan2(y, x), 2 * np.pi)
+        coord_1 = ops.mod(ops.arctan2(y, x), 2 * np.pi)
+        if self.theta_range is not None:
+            coord_1 -= self.theta_range[0]
+        coord_1 *= k_theta
         coord_2 = k_r * ops.sqrt(x ** 2 + y ** 2)
 
         coord_1 = ops.clip(coord_1, 0, input_shape[1] - 1)

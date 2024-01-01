@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from keras.models import *
 from keras import ops
@@ -13,6 +14,7 @@ class PolarTransformer(Model):
             dec_blocks=4,
             dec_dim=512,
             dec_heads=16,
+            polar_mode='center',
             dropout=0.,
             layer_norm_epsilon=1e-5,
             ipt_when_training=False,
@@ -21,20 +23,36 @@ class PolarTransformer(Model):
             **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        assert polar_mode in ['center', 'edge']
         self.sinogram_encoder = sinogram_encoder
         self.dec_dim = dec_dim
-
-        self.polar_transform = PolarTransform(
-            (sinogram_encoder.inp_shape[0], dec_dim),
-            name=f'{self.name}-polar_transform'
-        )
+        if polar_mode == 'center':
+            self.polar_transform = PolarTransform(
+                (sinogram_encoder.inp_shape[0], dec_dim),
+                name=f'{self.name}-polar_transform'
+            )
+            self.inv_polar_transform = InvPolarTransform(
+                out_shape,
+                name=f'{self.name}-inverse_polar_transform'
+            )
+        else:  # this should be 'edge' but I'm too lazy to enforce
+            self.polar_transform = PolarTransform(
+                (sinogram_encoder.inp_shape[0], dec_dim),
+                center=(out_shape[0] / 2, 0),
+                max_radius=np.sqrt((out_shape[0] / 2) ** 2 + out_shape[1] ** 2),
+                theta_range=(0., np.pi),
+                name=f'{self.name}-polar_transform'
+            )
+            self.inv_polar_transform = InvPolarTransform(
+                out_shape,
+                center=(out_shape[0] / 2, 0),
+                max_radius=np.sqrt((out_shape[0] / 2) ** 2 + out_shape[1] ** 2),
+                theta_range=(0., np.pi),
+                name=f'{self.name}-inverse_polar_transform'
+            )
 
         self.ipt_when_training = ipt_when_training
         self.ipt_when_testing = ipt_when_testing
-        self.inv_polar_transform = InvPolarTransform(
-            out_shape,
-            name=f'{self.name}-inverse_polar_transform'
-        )
 
         self.fbp_patches = Patches(dec_dim, 1, name=f'{self.name}-fbp_patches')
         self.fbp_patch_encoder = PatchEncoder(
