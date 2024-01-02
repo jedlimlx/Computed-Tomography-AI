@@ -222,15 +222,19 @@ class PatchEncoder(Layer):
 
         # positional encoding
         if embedding_type == 'learned':
-            self.position_embedding = PositionEmbedding(num_patches)
+            self.position_embedding = Embedding(input_dim=num_patches, output_dim=projection_dim)
         else:
             self.position_embedding = SinePositionEncoding(num_patches)
 
     def call(self, patch, **kwargs):
-        encoded = self.projection(patch)
-        embedding = self.position_embedding(encoded)
+        if self.embedding_type == 'learned':
+            positions = tf.range(start=0, limit=self.num_patches, delta=1)
+            embedding = self.position_embedding(positions)
+        else:
+            embedding = self.position_embedding
+        encoded = self.projection(patch) + embedding
 
-        return encoded + embedding
+        return encoded
 
     def get_config(self):
         cfg = super(PatchEncoder, self).get_config()
@@ -358,7 +362,7 @@ class TransformerEncoder(Layer):  # todo use keras cv implementation when it bec
 
         y = self.dense1(y)
         if self.activation == keras.activations.gelu:
-            y = self.activation(y, approximate=True)
+            y = self.activation(y, approximate=False)
         else:
             y = self.activation(y)
         y = self.dropout(y)

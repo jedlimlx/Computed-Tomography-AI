@@ -97,19 +97,20 @@ with strategy.scope():
         sinogram_width=513,
         sinogram_height=1,
         input_shape=(1024, 513, 1),
-        enc_dim=1024,
-        enc_mlp_units=1024 * 4,
-        dec_dim=1024,
-        dec_mlp_units=1024 * 4,
+        enc_dim=256,
+        enc_mlp_units=2048,
+        dec_dim=256,
+        dec_mlp_units=2048,
         mask_ratio=0.75,
+        divide_heads=False,
         dose=-1
     )
 
     model = HybridModel(
         mae,
         num_mask=0,
-        dec_dim=1024,
-        dec_mlp_units=1024 * 4,
+        dec_dim=256,
+        dec_mlp_units=1024,
         dec_layers=4,
         output_patch_width=16,
         output_patch_height=16,
@@ -123,17 +124,10 @@ with strategy.scope():
     mae(
         tf.random.normal(shape=(1, 1024, 513, 1))
     )
-    mae.load_weights('mae_model.weights.h5')
 
-    lr = CosineDecay(
-        initial_learning_rate=1e-6,
-        warmup_target=1e-5,
-        alpha=1e-6,
-        warmup_steps=35840 / GLOBAL_BATCH_SIZE,
-        decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
-    )
+    lr = keras.optimizers.schedules.CosineDecayRestarts(7e-5, 8000, m_mul=0.9)
     model.compile(
-        optimizer=keras.optimizers.AdamW(learning_rate=lr),
+        optimizer=keras.optimizers.AdamW(weight_decay=1e-6, learning_rate=lr, beta_1=0.9, beta_2=0.95),
         loss="mse",
         metrics=[
             "mean_squared_error",
@@ -154,6 +148,7 @@ with strategy.scope():
     model.summary()
 
     print()
+    model.trainable = True
 
     # train the model
     history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70)

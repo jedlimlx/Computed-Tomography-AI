@@ -69,11 +69,12 @@ class HybridModel(Model):
                 attention_dropout=self.autoencoder.dropout,
                 activation=self.autoencoder.activation,
                 divide_heads=divide_heads,
+                layer_norm_epsilon=self.autoencoder.layer_norm_epsilon,
                 name=f'dec_block_{i}'
             ) for i in range(self.dec_layers)
         ]
 
-        self.norm_layer = LayerNormalization(epsilon=1e-6, name=f'output_norm')
+        self.norm_layer = LayerNormalization(epsilon=self.autoencoder.layer_norm_epsilon, name=f'output_norm')
 
         self.dense = Dense(self.output_patch_height * self.output_patch_width, name='output_projection')
         self.patch_decoder = PatchDecoder(
@@ -93,7 +94,7 @@ class HybridModel(Model):
         self.autoencoder.patch_encoder.num_mask = self.num_mask
 
     def call(self, inputs, training=None, mask=None):
-        x,  y = inputs
+        x, y = inputs
 
         # Convert to patches and encode
         x = self.autoencoder.patches(x)

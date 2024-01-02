@@ -139,6 +139,7 @@ class MaskedSinogramAutoencoder(Model):
             radon_transform=None,
             dose=-1,
             denoise=False,
+            layer_norm_epsilon=1e-5,
             name='mae',
             **kwargs
     ):
@@ -170,6 +171,7 @@ class MaskedSinogramAutoencoder(Model):
         self.mask_ratio = mask_ratio
 
         self.divide_heads = divide_heads
+        self.layer_norm_epsilon = layer_norm_epsilon
 
         if input_shape[0] % sinogram_height != 0 or input_shape[1] % sinogram_width != 0:
             raise ValueError("Cannot divide image into even patches")
@@ -184,7 +186,7 @@ class MaskedSinogramAutoencoder(Model):
         )
 
         # building encoder layer
-        self.enc_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_enc_norm')
+        self.enc_norm = LayerNormalization(epsilon=layer_norm_epsilon, name=f'{name}_enc_norm')
 
         self.encoder = [
             TransformerEncoder(
@@ -195,12 +197,13 @@ class MaskedSinogramAutoencoder(Model):
                 attention_dropout=dropout,
                 activation=activation,
                 divide_heads=divide_heads,
+                layer_norm_epsilon=layer_norm_epsilon,
                 name=f'{name}_enc_block_{i}'
             ) for i in range(self.enc_layers)
         ]
 
         # building decoder layers
-        self.dec_norm = LayerNormalization(epsilon=1e-6, name=f'{name}_dec_norm')
+        self.dec_norm = LayerNormalization(epsilon=layer_norm_epsilon, name=f'{name}_dec_norm')
 
         self.decoder_projection = Dense(dec_dim, name=f'{name}_dec_projection')
 
