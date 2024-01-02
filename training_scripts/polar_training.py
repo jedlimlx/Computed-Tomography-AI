@@ -114,15 +114,15 @@ with strategy.scope():
     autoencoder.load_weights('mae_model.weights.h5')
     model((tf.random.normal((1, 1024, 513, 1)), tf.random.normal((1, 362, 362, 1))))
 
-    lr = CosineDecay(
-        initial_learning_rate=1e-6,
-        warmup_target=1e-5,
-        alpha=1e-6,
-        warmup_steps=35840 / GLOBAL_BATCH_SIZE,
-        decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
-    )
+    # lr = CosineDecay(
+    #     initial_learning_rate=1e-6,
+    #     warmup_target=1e-5,
+    #     alpha=1e-6,
+    #     warmup_steps=35840 / GLOBAL_BATCH_SIZE,
+    #     decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
+    # )
     model.compile(
-        optimizer=keras.optimizers.AdamW(learning_rate=lr),
+        optimizer=keras.optimizers.Lion(learning_rate=1e-5),
         loss="mse",
         metrics=[
             "mean_squared_error",
@@ -131,8 +131,8 @@ with strategy.scope():
             SSIM(rescaling=True, mean=0.16737686, std=0.11505456)
         ]
     )
-
-    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70)
+    autoencoder.trainable = True
+    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=100)
     training_df = pd.DataFrame(data=training_history.history)
     training_df.to_csv("polar_transformer_training.csv")
 
