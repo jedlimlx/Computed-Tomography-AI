@@ -117,7 +117,8 @@ with strategy.scope():
         output_x_patches=32,
         output_y_patches=32,
         final_shape=(362, 362, 1),
-        dec_embedding_type='learned'
+        dec_embedding_type='learned',
+        divide_heads=False
     )
 
     # build the MAE and print out the number of parameters

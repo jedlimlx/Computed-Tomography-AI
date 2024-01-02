@@ -491,14 +491,14 @@ class TransformerDecoder(Layer):  # todo use keras cv implementation when it bec
         x = x + encoder_inputs
 
         y = self.layer_norm2(x)
-        y = self.attn(y, decoder_inputs)
+        y = self.cross_attn(y, decoder_inputs)
         y = self.dropout(y)
         y = x + y
 
         z = self.layer_norm3(y)
         z = self.dense1(z)
         if self.activation == keras.activations.gelu:
-            z = self.activation(z, approximate=True)
+            z = self.activation(z, approximate=False)
         else:
             z = self.activation(z)
 
