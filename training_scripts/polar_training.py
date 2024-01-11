@@ -129,7 +129,12 @@ with strategy.scope():
             "mean_absolute_error",
             PSNR(rescaling=True, mean=0.16737686, std=0.11505456),
             SSIM(rescaling=True, mean=0.16737686, std=0.11505456)
-        ]
+        ],
+        callbacks=[keras.callbacks.ReduceLROnPlateau(
+            factor=0.5,
+            patience=1,
+            min_lr=1e-6
+        )]
     )
     autoencoder.trainable = True
     training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70, callbacks=[
