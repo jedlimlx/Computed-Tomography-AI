@@ -231,7 +231,7 @@ class PatchEncoder(Layer):
             positions = tf.range(start=0, limit=self.num_patches, delta=1)
             embedding = self.position_embedding(positions)
         else:
-            embedding = self.position_embedding
+            embedding = self.position_embedding(patch)
         encoded = self.projection(patch) + embedding
 
         return encoded
