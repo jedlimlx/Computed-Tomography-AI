@@ -134,12 +134,7 @@ with strategy.scope():
             "mean_absolute_error",
             PSNR(rescaling=True, mean=0.16737686, std=0.11505456),
             SSIM(rescaling=True, mean=0.16737686, std=0.11505456)
-        ],
-        callbacks=[keras.callbacks.ReduceLROnPlateau(
-            factor=0.5,
-            patience=1,
-            min_lr=1e-6
-        )]
+        ]
     )
 
     # build the model and print out the number of parameters=
@@ -156,7 +151,13 @@ with strategy.scope():
     model.trainable = True
 
     # train the model
-    history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70)
+    history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70, callbacks=[
+        keras.callbacks.ReduceLROnPlateau(
+            factor=0.5,
+            patience=1,
+            min_lr=1e-6
+        )
+    ])
     model.save_weights('hybrid_model.weights.h5')
     model.save('hybrid_model.keras')
     training_df = pd.DataFrame(data=history.history)
