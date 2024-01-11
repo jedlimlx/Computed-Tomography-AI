@@ -122,7 +122,7 @@ with strategy.scope():
     #     decay_steps=69 * 35840 / GLOBAL_BATCH_SIZE,
     # )
     model.compile(
-        optimizer=keras.optimizers.Lion(learning_rate=1e-5),
+        optimizer=keras.optimizers.Lion(learning_rate=1e-4, beta_1=0.9, beta_2=0.95),
         loss="mse",
         metrics=[
             "mean_squared_error",
@@ -132,7 +132,13 @@ with strategy.scope():
         ]
     )
     autoencoder.trainable = True
-    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=100)
+    training_history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70, callbacks=[
+        keras.callbacks.ReduceLROnPlateau(
+            factor=0.5,
+            patience=1,
+            min_lr=1e-6
+        )
+    ])
     training_df = pd.DataFrame(data=training_history.history)
     training_df.to_csv("polar_transformer_training.csv")
 

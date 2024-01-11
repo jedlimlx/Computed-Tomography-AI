@@ -126,16 +126,15 @@ with strategy.scope():
         tf.random.normal(shape=(1, 1024, 513, 1))
     )
 
-    lr = keras.optimizers.schedules.CosineDecayRestarts(7e-5, 8000, m_mul=0.9)
     model.compile(
-        optimizer=keras.optimizers.AdamW(weight_decay=1e-6, learning_rate=lr, beta_1=0.9, beta_2=0.95),
+        optimizer=keras.optimizers.Lion(learning_rate=1e-4, beta_1=0.9, beta_2=0.95),
         loss="mse",
         metrics=[
             "mean_squared_error",
             "mean_absolute_error",
             PSNR(rescaling=True, mean=0.16737686, std=0.11505456),
             SSIM(rescaling=True, mean=0.16737686, std=0.11505456)
-        ]
+        ],
     )
 
     # build the model and print out the number of parameters=
@@ -152,7 +151,13 @@ with strategy.scope():
     model.trainable = True
 
     # train the model
-    history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70)
+    history = model.fit(train_ds_denoise, validation_data=val_ds_denoise, epochs=70, callbacks=[
+        keras.callbacks.ReduceLROnPlateau(
+            factor=0.5,
+            patience=1,
+            min_lr=1e-6
+        )
+    ])
     model.save_weights('hybrid_model.weights.h5')
     model.save('hybrid_model.keras')
     training_df = pd.DataFrame(data=history.history)
